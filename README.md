@@ -7,6 +7,7 @@
 - API: `http://127.0.0.1:8000`
 
 This will:
+
 - start Postgres
 - run Alembic migrations on container startup
 - start FastAPI via Uvicorn
@@ -15,12 +16,13 @@ This will:
 
 - Create a `.env` from `.env.example` and set `DATABASE_URL`
 - Install deps: `pip install -r requirements.txt`
-- Run migrations: `alembic upgrade head`
+- Run migrations: `python -m alembic -c alembic/alembic.ini upgrade head`
 - Start API: `uvicorn app.main:app --reload`
 
 ## Deploy (Render)
 
 Recommended approach:
+
 - Deploy the API using the included `Dockerfile`
 - Use a managed Postgres instance (Render Postgres)
 - Set environment variables:
@@ -29,7 +31,7 @@ Recommended approach:
   - `ALGORITHM` (default `HS256`)
   - `ACCESS_TOKEN_EXPIRE_MINUTES` (default 10 days)
 
-The container entrypoint runs `alembic upgrade head` before starting the server.
+The container entrypoint runs `python -m alembic -c alembic/alembic.ini upgrade head` before starting the server.
 
 ## Frontend (Vercel)
 
