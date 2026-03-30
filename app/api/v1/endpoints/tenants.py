@@ -4,7 +4,7 @@ from typing import List
 import uuid
 from app.db.session import get_db
 from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_user, get_current_context, require_permission
-from app.models.models import User, Tenant, UserTenant, Role
+from app.models.models import Permission, RolePermission, User, Tenant, UserTenant, Role
 from app.schemas.schemas import TenantCreate, TenantOut, AddMemberRequest, MembershipOut
 from app.services.audit_service import write_audit_log
 
@@ -26,6 +26,26 @@ def create_tenant(
     admin_role = Role(id=str(uuid.uuid4()), name="Admin", tenant_id=tenant.id)
     db.add(admin_role)
     db.flush()
+
+    # Ensure core permissions exist and grant them to the Admin role.
+    core_permissions = [
+        ("tenant:manage", "Manage tenant members and settings"),
+        ("module:manage", "Manage tenant modules and subscriptions"),
+        ("role:manage", "Manage roles and permissions"),
+    ]
+    for perm_name, perm_desc in core_permissions:
+        perm = db.query(Permission).filter(Permission.name == perm_name).first()
+        if not perm:
+            perm = Permission(id=str(uuid.uuid4()), name=perm_name, description=perm_desc)
+            db.add(perm)
+            db.flush()
+        db.add(
+            RolePermission(
+                id=str(uuid.uuid4()),
+                role_id=admin_role.id,
+                permission_id=perm.id,
+            )
+        )
     membership = UserTenant(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
@@ -81,14 +101,7 @@ def add_member(
     db: Session = Depends(get_db),
 ):
     ensure_path_tenant(tenant_id, ctx)
-    # Check caller is admin of this tenant
-    caller = db.query(UserTenant).join(Role).filter(
-        UserTenant.user_id == ctx.user.id,
-        UserTenant.tenant_id == tenant_id,
-        Role.name == "Admin",
-    ).first()
-    if not caller:
-        raise HTTPException(status_code=403, detail="Only Admin can add members")
+    # Any role with tenant:manage may add members (Admin is automatically allowed).
     role_id = data.role_id
     if data.role_name:
         role = (
