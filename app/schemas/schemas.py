@@ -111,13 +111,16 @@ class AssignPermissionRequest(BaseModel):
 # ─── Membership ───────────────────────────────────────────────────────────────
 
 class AddMemberRequest(BaseModel):
-    user_id: str
+    user_id: Optional[str] = None
+    user_email: Optional[EmailStr] = None
     role_id: Optional[str] = None
     role_name: Optional[str] = None
 
 class MembershipOut(BaseModel):
     id: str
     user_id: str
+    user_email: Optional[str] = None
+    user_full_name: Optional[str] = None
     tenant_id: str
     role_id: str
     role_name: Optional[str] = None

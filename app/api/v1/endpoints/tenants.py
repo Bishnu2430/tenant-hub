@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
@@ -106,6 +107,20 @@ def add_member(
 ):
     ensure_path_tenant(tenant_id, ctx)
     # Any role with tenant:manage may add members (Admin is automatically allowed).
+    effective_user_id: str | None = data.user_id
+    if not effective_user_id and data.user_email:
+        user = (
+            db.query(User)
+            .filter(func.lower(User.email) == str(data.user_email).lower(), User.is_deleted == False)
+            .first()
+        )
+        if not user or not user.is_active:
+            raise HTTPException(status_code=404, detail="User not found")
+        effective_user_id = user.id
+
+    if not effective_user_id:
+        raise HTTPException(status_code=400, detail="Provide user_id or user_email")
+
     role_id = data.role_id
     if data.role_name:
         role = (
@@ -120,13 +135,27 @@ def add_member(
     if not role_id:
         raise HTTPException(status_code=400, detail="Provide role_id or role_name")
 
-    membership = UserTenant(
-        id=str(uuid.uuid4()),
-        user_id=data.user_id,
-        tenant_id=tenant_id,
-        role_id=role_id,
-    )
-    db.add(membership)
+    existing = db.query(UserTenant).filter(
+        UserTenant.tenant_id == tenant_id,
+        UserTenant.user_id == effective_user_id,
+    ).first()
+
+    if existing and existing.is_active:
+        raise HTTPException(status_code=400, detail="User is already a member")
+
+    if existing and not existing.is_active:
+        existing.is_active = True
+        existing.role_id = role_id
+        membership = existing
+    else:
+        membership = UserTenant(
+            id=str(uuid.uuid4()),
+            user_id=effective_user_id,
+            tenant_id=tenant_id,
+            role_id=role_id,
+        )
+        db.add(membership)
+
     db.commit()
     db.refresh(membership)
     write_audit_log(
@@ -135,7 +164,12 @@ def add_member(
         request=request,
         action="member:add",
         resource=f"tenant:{tenant_id}",
-        details={"user_id": data.user_id, "role_id": membership.role_id, "role_name": membership.role_name},
+        details={
+            "user_id": membership.user_id,
+            "user_email": membership.user_email,
+            "role_id": membership.role_id,
+            "role_name": membership.role_name,
+        },
     )
     return membership
 

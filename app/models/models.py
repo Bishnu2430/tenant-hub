@@ -126,6 +126,14 @@ class UserTenant(Base):
     def role_name(self) -> str | None:
         return self.role.name if self.role else None
 
+    @property
+    def user_email(self) -> str | None:
+        return self.user.email if self.user else None
+
+    @property
+    def user_full_name(self) -> str | None:
+        return self.user.full_name if self.user else None
+
 
 # ─── Module ───────────────────────────────────────────────────────────────────
 
