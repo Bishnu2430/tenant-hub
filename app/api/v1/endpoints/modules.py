@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
@@ -11,6 +11,7 @@ from app.schemas.schemas import (
     SubscriptionCreate, SubscriptionOut,
     FeatureToggleCreate, FeatureToggleOut,
 )
+from app.services.audit_service import write_audit_log
 
 router = APIRouter(tags=["Modules & Subscriptions"])
 
@@ -19,6 +20,7 @@ router = APIRouter(tags=["Modules & Subscriptions"])
 
 @router.post("/modules", response_model=ModuleOut, status_code=201)
 def create_module(
+    request: Request,
     data: ModuleCreate,
     db: Session = Depends(get_db),
     _ctx: RequestContext = Depends(require_permission("module:manage")),
@@ -27,6 +29,14 @@ def create_module(
     db.add(m)
     db.commit()
     db.refresh(m)
+    write_audit_log(
+        db=db,
+        ctx=_ctx,
+        request=request,
+        action="module:create",
+        resource=f"module:{m.id}",
+        details={"name": m.name},
+    )
     return m
 
 
@@ -39,6 +49,7 @@ def list_modules(db: Session = Depends(get_db)):
 
 @router.post("/tenants/{tenant_id}/modules", status_code=201)
 def enable_module(
+    request: Request,
     tenant_id: str,
     data: EnableModuleRequest,
     db: Session = Depends(get_db),
@@ -57,10 +68,26 @@ def enable_module(
     if existing:
         existing.is_enabled = True
         db.commit()
+        write_audit_log(
+            db=db,
+            ctx=ctx,
+            request=request,
+            action="module:enable",
+            resource=f"tenant:{tenant_id}",
+            details={"module_id": data.module_id, "re_enabled": True},
+        )
         return {"message": "Module re-enabled"}
     tm = TenantModule(id=str(uuid.uuid4()), tenant_id=tenant_id, module_id=data.module_id)
     db.add(tm)
     db.commit()
+    write_audit_log(
+        db=db,
+        ctx=ctx,
+        request=request,
+        action="module:enable",
+        resource=f"tenant:{tenant_id}",
+        details={"module_id": data.module_id, "re_enabled": False},
+    )
     return {"message": "Module enabled for tenant"}
 
 
@@ -81,6 +108,7 @@ def get_tenant_modules(
 
 @router.post("/tenants/{tenant_id}/subscriptions", response_model=SubscriptionOut, status_code=201)
 def create_subscription(
+    request: Request,
     tenant_id: str,
     data: SubscriptionCreate,
     db: Session = Depends(get_db),
@@ -93,6 +121,14 @@ def create_subscription(
     db.add(sub)
     db.commit()
     db.refresh(sub)
+    write_audit_log(
+        db=db,
+        ctx=ctx,
+        request=request,
+        action="subscription:set",
+        resource=f"tenant:{tenant_id}",
+        details={"plan": str(sub.plan), "expires_at": str(sub.expires_at) if sub.expires_at else None},
+    )
     return sub
 
 
@@ -110,6 +146,7 @@ def get_subscriptions(
 
 @router.post("/tenants/{tenant_id}/features", response_model=FeatureToggleOut, status_code=201)
 def set_feature(
+    request: Request,
     tenant_id: str,
     data: FeatureToggleCreate,
     db: Session = Depends(get_db),
@@ -124,11 +161,27 @@ def set_feature(
         existing.is_enabled = data.is_enabled
         db.commit()
         db.refresh(existing)
+        write_audit_log(
+            db=db,
+            ctx=ctx,
+            request=request,
+            action="feature:set",
+            resource=f"tenant:{tenant_id}",
+            details={"feature_key": existing.feature_key, "is_enabled": existing.is_enabled},
+        )
         return existing
     ft = FeatureToggle(id=str(uuid.uuid4()), tenant_id=tenant_id, **data.model_dump())
     db.add(ft)
     db.commit()
     db.refresh(ft)
+    write_audit_log(
+        db=db,
+        ctx=ctx,
+        request=request,
+        action="feature:set",
+        resource=f"tenant:{tenant_id}",
+        details={"feature_key": ft.feature_key, "is_enabled": ft.is_enabled},
+    )
     return ft
 
 

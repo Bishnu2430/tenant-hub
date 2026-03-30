@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
@@ -6,12 +6,14 @@ from app.db.session import get_db
 from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_user, get_current_context, require_permission
 from app.models.models import User, Tenant, UserTenant, Role
 from app.schemas.schemas import TenantCreate, TenantOut, AddMemberRequest, MembershipOut
+from app.services.audit_service import write_audit_log
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 
 @router.post("", response_model=TenantOut, status_code=201)
 def create_tenant(
+    request: Request,
     data: TenantCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -33,6 +35,16 @@ def create_tenant(
     db.add(membership)
     db.commit()
     db.refresh(tenant)
+    # Not tenant-scoped yet, but record under the created tenant.
+    audit_ctx = RequestContext(user=current_user, tenant_id=tenant.id, role=admin_role)
+    write_audit_log(
+        db=db,
+        ctx=audit_ctx,
+        request=request,
+        action="tenant:create",
+        resource=f"tenant:{tenant.id}",
+        details={"slug": tenant.slug, "industry": str(tenant.industry)},
+    )
     return tenant
 
 
@@ -62,6 +74,7 @@ def get_tenant(
 
 @router.post("/{tenant_id}/members", response_model=MembershipOut, status_code=201)
 def add_member(
+    request: Request,
     tenant_id: str,
     data: AddMemberRequest,
     ctx: RequestContext = Depends(require_permission("tenant:manage")),
@@ -99,6 +112,14 @@ def add_member(
     db.add(membership)
     db.commit()
     db.refresh(membership)
+    write_audit_log(
+        db=db,
+        ctx=ctx,
+        request=request,
+        action="member:add",
+        resource=f"tenant:{tenant_id}",
+        details={"user_id": data.user_id, "role_id": membership.role_id, "role_name": membership.role_name},
+    )
     return membership
 
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_context, require_permission
 from app.models.models import User, Role, Permission, RolePermission
 from app.schemas.schemas import RoleCreate, RoleOut, PermissionCreate, PermissionOut, AssignPermissionRequest
+from app.services.audit_service import write_audit_log
 
 router = APIRouter(tags=["Roles & Permissions"])
 
@@ -14,6 +15,7 @@ router = APIRouter(tags=["Roles & Permissions"])
 
 @router.post("/roles", response_model=RoleOut, status_code=201)
 def create_role(
+    request: Request,
     data: RoleCreate,
     ctx: RequestContext = Depends(require_permission("role:manage")),
     db: Session = Depends(get_db),
@@ -24,6 +26,15 @@ def create_role(
     db.add(role)
     db.commit()
     db.refresh(role)
+    if role.tenant_id:
+        write_audit_log(
+            db=db,
+            ctx=ctx,
+            request=request,
+            action="role:create",
+            resource=f"role:{role.id}",
+            details={"name": role.name, "tenant_id": role.tenant_id},
+        )
     return role
 
 
@@ -44,6 +55,7 @@ def list_roles(
 
 @router.post("/roles/{role_id}/permissions", status_code=201)
 def assign_permission(
+    request: Request,
     role_id: str,
     data: AssignPermissionRequest,
     db: Session = Depends(get_db),
@@ -65,6 +77,14 @@ def assign_permission(
     rp = RolePermission(id=str(uuid.uuid4()), role_id=role_id, permission_id=data.permission_id)
     db.add(rp)
     db.commit()
+    write_audit_log(
+        db=db,
+        ctx=ctx,
+        request=request,
+        action="role:assign-permission",
+        resource=f"role:{role_id}",
+        details={"permission_id": data.permission_id},
+    )
     return {"message": "Permission assigned"}
 
 
@@ -87,6 +107,7 @@ def get_role_permissions(
 
 @router.post("/permissions", response_model=PermissionOut, status_code=201)
 def create_permission(
+    request: Request,
     data: PermissionCreate,
     db: Session = Depends(get_db),
     _ctx: RequestContext = Depends(require_permission("role:manage")),
@@ -97,6 +118,15 @@ def create_permission(
     db.add(perm)
     db.commit()
     db.refresh(perm)
+    # Global permission registry: tenant_id may not apply.
+    write_audit_log(
+        db=db,
+        ctx=_ctx,
+        request=request,
+        action="permission:create",
+        resource=f"permission:{perm.id}",
+        details={"name": perm.name},
+    )
     return perm
 
 
