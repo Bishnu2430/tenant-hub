@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import uuid
 from app.db.session import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_user, get_current_context, require_permission
 from app.models.models import User, Tenant, UserTenant, Role
 from app.schemas.schemas import TenantCreate, TenantOut, AddMemberRequest, MembershipOut
 
@@ -48,7 +48,12 @@ def list_my_tenants(
 
 
 @router.get("/{tenant_id}", response_model=TenantOut)
-def get_tenant(tenant_id: str, db: Session = Depends(get_db)):
+def get_tenant(
+    tenant_id: str,
+    ctx: RequestContext = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    ensure_path_tenant(tenant_id, ctx)
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id, Tenant.is_deleted == False).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -59,12 +64,13 @@ def get_tenant(tenant_id: str, db: Session = Depends(get_db)):
 def add_member(
     tenant_id: str,
     data: AddMemberRequest,
-    current_user: User = Depends(get_current_user),
+    ctx: RequestContext = Depends(require_permission("tenant:manage")),
     db: Session = Depends(get_db),
 ):
+    ensure_path_tenant(tenant_id, ctx)
     # Check caller is admin of this tenant
     caller = db.query(UserTenant).join(Role).filter(
-        UserTenant.user_id == current_user.id,
+        UserTenant.user_id == ctx.user.id,
         UserTenant.tenant_id == tenant_id,
         Role.name == "Admin",
     ).first()
@@ -83,7 +89,12 @@ def add_member(
 
 
 @router.get("/{tenant_id}/members", response_model=List[MembershipOut])
-def list_members(tenant_id: str, db: Session = Depends(get_db)):
+def list_members(
+    tenant_id: str,
+    ctx: RequestContext = Depends(require_permission("tenant:manage")),
+    db: Session = Depends(get_db),
+):
+    ensure_path_tenant(tenant_id, ctx)
     return db.query(UserTenant).filter(
         UserTenant.tenant_id == tenant_id, UserTenant.is_active == True
     ).all()

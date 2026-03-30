@@ -4,7 +4,7 @@ from typing import List
 import uuid
 from datetime import datetime
 from app.db.session import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_context, require_permission
 from app.models.models import User, Module, TenantModule, Subscription, FeatureToggle, Tenant
 from app.schemas.schemas import (
     ModuleCreate, ModuleOut, EnableModuleRequest,
@@ -18,7 +18,11 @@ router = APIRouter(tags=["Modules & Subscriptions"])
 # ─── Modules (global) ─────────────────────────────────────────────────────────
 
 @router.post("/modules", response_model=ModuleOut, status_code=201)
-def create_module(data: ModuleCreate, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def create_module(
+    data: ModuleCreate,
+    db: Session = Depends(get_db),
+    _ctx: RequestContext = Depends(require_permission("module:manage")),
+):
     m = Module(id=str(uuid.uuid4()), **data.model_dump())
     db.add(m)
     db.commit()
@@ -38,8 +42,9 @@ def enable_module(
     tenant_id: str,
     data: EnableModuleRequest,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    ctx: RequestContext = Depends(require_permission("module:manage")),
 ):
+    ensure_path_tenant(tenant_id, ctx)
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -60,7 +65,12 @@ def enable_module(
 
 
 @router.get("/tenants/{tenant_id}/modules", response_model=List[ModuleOut])
-def get_tenant_modules(tenant_id: str, db: Session = Depends(get_db)):
+def get_tenant_modules(
+    tenant_id: str,
+    ctx: RequestContext = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    ensure_path_tenant(tenant_id, ctx)
     tms = db.query(TenantModule).filter(
         TenantModule.tenant_id == tenant_id, TenantModule.is_enabled == True
     ).all()
@@ -74,8 +84,9 @@ def create_subscription(
     tenant_id: str,
     data: SubscriptionCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    ctx: RequestContext = Depends(require_permission("tenant:manage")),
 ):
+    ensure_path_tenant(tenant_id, ctx)
     # Deactivate old subscriptions
     db.query(Subscription).filter(Subscription.tenant_id == tenant_id).update({"is_active": False})
     sub = Subscription(id=str(uuid.uuid4()), tenant_id=tenant_id, **data.model_dump())
@@ -86,7 +97,12 @@ def create_subscription(
 
 
 @router.get("/tenants/{tenant_id}/subscriptions", response_model=List[SubscriptionOut])
-def get_subscriptions(tenant_id: str, db: Session = Depends(get_db)):
+def get_subscriptions(
+    tenant_id: str,
+    ctx: RequestContext = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    ensure_path_tenant(tenant_id, ctx)
     return db.query(Subscription).filter(Subscription.tenant_id == tenant_id).all()
 
 
@@ -97,8 +113,9 @@ def set_feature(
     tenant_id: str,
     data: FeatureToggleCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    ctx: RequestContext = Depends(require_permission("tenant:manage")),
 ):
+    ensure_path_tenant(tenant_id, ctx)
     existing = db.query(FeatureToggle).filter(
         FeatureToggle.tenant_id == tenant_id,
         FeatureToggle.feature_key == data.feature_key,
@@ -116,5 +133,10 @@ def set_feature(
 
 
 @router.get("/tenants/{tenant_id}/features", response_model=List[FeatureToggleOut])
-def list_features(tenant_id: str, db: Session = Depends(get_db)):
+def list_features(
+    tenant_id: str,
+    ctx: RequestContext = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    ensure_path_tenant(tenant_id, ctx)
     return db.query(FeatureToggle).filter(FeatureToggle.tenant_id == tenant_id).all()
