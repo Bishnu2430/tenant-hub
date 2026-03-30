@@ -1,12 +1,17 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.models import User, UserTenant
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import hash_password, verify_password, create_access_token, validate_bcrypt_password_length
 from app.schemas.schemas import RegisterRequest, LoginRequest, SwitchContextRequest
 import uuid
 
 
 def register_user(data: RegisterRequest, db: Session) -> User:
+    try:
+        validate_bcrypt_password_length(data.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(
@@ -22,13 +27,18 @@ def register_user(data: RegisterRequest, db: Session) -> User:
 
 
 def login_user(data: LoginRequest, db: Session) -> dict:
+    try:
+        validate_bcrypt_password_length(data.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     user = db.query(User).filter(User.email == data.email, User.is_deleted == False).first()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = create_access_token({"sub": user.id})
     # Fetch tenant memberships to return in response
     memberships = db.query(UserTenant).filter(UserTenant.user_id == user.id, UserTenant.is_active == True).all()
-    tenants = [{"tenant_id": m.tenant_id, "role_id": m.role_id} for m in memberships]
+    tenants = [{"tenant_id": m.tenant_id, "role_id": m.role_id, "role_name": m.role_name} for m in memberships]
     return {"access_token": token, "token_type": "bearer", "tenants": tenants}
 
 

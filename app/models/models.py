@@ -121,6 +121,10 @@ class UserTenant(Base):
     tenant = relationship("Tenant", back_populates="memberships")
     role = relationship("Role", back_populates="memberships")
 
+    @property
+    def role_name(self) -> str | None:
+        return self.role.name if self.role else None
+
 
 # ─── Module ───────────────────────────────────────────────────────────────────
 

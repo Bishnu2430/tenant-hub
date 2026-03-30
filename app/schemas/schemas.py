@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from app.models.models import SubscriptionPlan, TenantIndustry
@@ -8,12 +8,12 @@ from app.models.models import SubscriptionPlan, TenantIndustry
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     full_name: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -103,13 +103,15 @@ class AssignPermissionRequest(BaseModel):
 
 class AddMemberRequest(BaseModel):
     user_id: str
-    role_id: str
+    role_id: Optional[str] = None
+    role_name: Optional[str] = None
 
 class MembershipOut(BaseModel):
     id: str
     user_id: str
     tenant_id: str
     role_id: str
+    role_name: Optional[str] = None
     is_active: bool
     joined_at: datetime
 

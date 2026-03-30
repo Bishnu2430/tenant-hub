@@ -76,11 +76,25 @@ def add_member(
     ).first()
     if not caller:
         raise HTTPException(status_code=403, detail="Only Admin can add members")
+    role_id = data.role_id
+    if data.role_name:
+        role = (
+            db.query(Role)
+            .filter(Role.tenant_id == tenant_id, Role.name == data.role_name, Role.is_deleted == False)
+            .first()
+        )
+        if not role:
+            raise HTTPException(status_code=404, detail="Role not found")
+        role_id = role.id
+
+    if not role_id:
+        raise HTTPException(status_code=400, detail="Provide role_id or role_name")
+
     membership = UserTenant(
         id=str(uuid.uuid4()),
         user_id=data.user_id,
         tenant_id=tenant_id,
-        role_id=data.role_id,
+        role_id=role_id,
     )
     db.add(membership)
     db.commit()
