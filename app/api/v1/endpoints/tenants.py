@@ -5,6 +5,7 @@ import uuid
 from app.db.session import get_db
 from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_user, get_current_context, require_permission
 from app.models.models import Permission, RolePermission, User, Tenant, UserTenant, Role
+from app.core.permission_defaults import DEFAULT_PERMISSIONS
 from app.schemas.schemas import TenantCreate, TenantOut, AddMemberRequest, MembershipOut
 from app.services.audit_service import write_audit_log
 
@@ -27,25 +28,28 @@ def create_tenant(
     db.add(admin_role)
     db.flush()
 
-    # Ensure core permissions exist and grant them to the Admin role.
-    core_permissions = [
-        ("tenant:manage", "Manage tenant members and settings"),
-        ("module:manage", "Manage tenant modules and subscriptions"),
-        ("role:manage", "Manage roles and permissions"),
-    ]
-    for perm_name, perm_desc in core_permissions:
+    # Ensure default permissions exist and grant them to the Admin role.
+    # (Admin is already treated as superuser, but this makes the permission model complete and
+    # enables UI-friendly role/permission listings without needing to run seed.py first.)
+    for perm_name, perm_desc in DEFAULT_PERMISSIONS:
         perm = db.query(Permission).filter(Permission.name == perm_name).first()
         if not perm:
             perm = Permission(id=str(uuid.uuid4()), name=perm_name, description=perm_desc)
             db.add(perm)
             db.flush()
-        db.add(
-            RolePermission(
-                id=str(uuid.uuid4()),
-                role_id=admin_role.id,
-                permission_id=perm.id,
+
+        already_granted = db.query(RolePermission).filter(
+            RolePermission.role_id == admin_role.id,
+            RolePermission.permission_id == perm.id,
+        ).first()
+        if not already_granted:
+            db.add(
+                RolePermission(
+                    id=str(uuid.uuid4()),
+                    role_id=admin_role.id,
+                    permission_id=perm.id,
+                )
             )
-        )
     membership = UserTenant(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
