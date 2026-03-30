@@ -10,8 +10,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.db.session import Base  # noqa: E402
 from app.models import models  # noqa: F401,E402  ensure models are registered
+from app.core.config import settings  # noqa: E402
 
 config = context.config
+
+# Always take DB URL from runtime config (.env / env vars) instead of hardcoding in alembic.ini.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
