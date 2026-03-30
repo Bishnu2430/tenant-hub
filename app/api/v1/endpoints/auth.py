@@ -1,22 +1,35 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.schemas import RegisterRequest, LoginRequest, SwitchContextRequest, UserOut, SwitchContextResponse
 from app.services.auth_service import register_user, login_user, switch_context
 from app.core.dependencies import get_current_user
 from app.models.models import User
+from app.core.rate_limit import rate_limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
-def register(data: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, data: RegisterRequest, db: Session = Depends(get_db)):
+    key = f"register:{request.client.host if request.client else 'unknown'}:{data.email.lower()}"
+    if not rate_limiter.allow(key, limit=5, window_seconds=300):
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
     return register_user(data, db)
 
 
 @router.post("/login")
-def login(data: LoginRequest, db: Session = Depends(get_db)):
-    return login_user(data, db)
+def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+    key = f"login:{request.client.host if request.client else 'unknown'}:{data.email.lower()}"
+    if not rate_limiter.allow(key, limit=10, window_seconds=300):
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+    try:
+        result = login_user(data, db)
+        rate_limiter.reset(key)
+        return result
+    except HTTPException as e:
+        # keep limiter state on failures
+        raise e
 
 
 @router.post("/switch-context", response_model=SwitchContextResponse)
