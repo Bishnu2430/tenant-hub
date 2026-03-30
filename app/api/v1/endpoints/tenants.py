@@ -24,6 +24,10 @@ def create_tenant(
         raise HTTPException(status_code=400, detail="Slug already taken")
     tenant = Tenant(id=str(uuid.uuid4()), **data.model_dump())
     db.add(tenant)
+
+    # Ensure the tenant row exists before inserting dependent rows (e.g., Role.tenant_id).
+    db.flush()
+
     # Auto-create Admin role for this tenant and assign to creator
     admin_role = Role(id=str(uuid.uuid4()), name="Admin", tenant_id=tenant.id)
     db.add(admin_role)

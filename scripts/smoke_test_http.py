@@ -121,7 +121,7 @@ def main() -> int:
     # Admin adds manager as a member with Manager role
     api.post(
         f"/tenants/{tenant_id}/members",
-        {"user_id": manager_me["id"], "role_name": "Manager"},
+        {"user_email": manager_email, "role_name": "Manager"},
         token=admin_ctx,
     )
 
@@ -142,7 +142,7 @@ def main() -> int:
 
     st, membership = api.post(
         f"/tenants/{tenant_id}/members",
-        {"user_id": user2_me["id"], "role_name": "Manager"},
+        {"user_email": user2_email, "role_name": "Manager"},
         token=manager_ctx,
     )
     assert st == 201
