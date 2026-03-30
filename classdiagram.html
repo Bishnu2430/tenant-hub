@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Class Diagram — SaaS Platform</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f7f6f2;
+        --surface: #ffffff;
+        --border: #e2e0d8;
+        --border-strong: #c8c5ba;
+        --text-primary: #1a1916;
+        --text-secondary: #5a5851;
+        --text-tertiary: #9a9890;
+        --purple-fill: #eeedfe;
+        --purple-stroke: #534ab7;
+        --purple-text: #26215c;
+        --teal-fill: #d4f0e6;
+        --teal-stroke: #0f6e56;
+        --teal-text: #085041;
+        --amber-fill: #faeeda;
+        --amber-stroke: #854f0b;
+        --amber-text: #412402;
+        --coral-fill: #faece7;
+        --coral-stroke: #993c1d;
+        --coral-text: #4a1b0c;
+        --gray-fill: #f1efe8;
+        --gray-stroke: #5f5e5a;
+        --gray-text: #2c2c2a;
+      }
+
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        min-height: 100vh;
+        padding: 56px 40px;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .header {
+        margin-bottom: 48px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 32px;
+        flex-wrap: wrap;
+      }
+
+      .header-left {
+        flex: 1;
+        min-width: 260px;
+      }
+
+      .badge {
+        display: inline-block;
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        background: var(--border);
+        border-radius: 4px;
+        padding: 4px 10px;
+        margin-bottom: 14px;
+      }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+
+      /* Legend */
+      .legend {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .legend-title {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 2px;
+      }
+
+      .legend-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 12px 5px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid;
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .leg-purple {
+        background: var(--purple-fill);
+        border-color: var(--purple-stroke);
+        color: var(--purple-text);
+      }
+      .leg-purple .legend-dot {
+        background: var(--purple-stroke);
+      }
+      .leg-teal {
+        background: var(--teal-fill);
+        border-color: var(--teal-stroke);
+        color: var(--teal-text);
+      }
+      .leg-teal .legend-dot {
+        background: var(--teal-stroke);
+      }
+      .leg-amber {
+        background: var(--amber-fill);
+        border-color: var(--amber-stroke);
+        color: var(--amber-text);
+      }
+      .leg-amber .legend-dot {
+        background: var(--amber-stroke);
+      }
+      .leg-coral {
+        background: var(--coral-fill);
+        border-color: var(--coral-stroke);
+        color: var(--coral-text);
+      }
+      .leg-coral .legend-dot {
+        background: var(--coral-stroke);
+      }
+      .leg-gray {
+        background: var(--gray-fill);
+        border-color: var(--gray-stroke);
+        color: var(--gray-text);
+      }
+      .leg-gray .legend-dot {
+        background: var(--gray-stroke);
+      }
+
+      /* Relationship key */
+      .rel-key {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .rel-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .rel-line {
+        width: 28px;
+        height: 1px;
+        background: var(--text-tertiary);
+        position: relative;
+      }
+      .rel-line.dashed {
+        background: repeating-linear-gradient(
+          90deg,
+          var(--text-tertiary) 0,
+          var(--text-tertiary) 4px,
+          transparent 4px,
+          transparent 7px
+        );
+      }
+
+      /* Diagram card */
+      .diagram-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 48px 40px 40px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 16px rgba(0, 0, 0, 0.04);
+        overflow-x: auto;
+      }
+
+      #cd {
+        min-height: 200px;
+        display: flex;
+        justify-content: center;
+      }
+
+      #cd svg {
+        font-family: "DM Sans", sans-serif !important;
+        max-width: 100%;
+        height: auto;
+      }
+
+      /* Override mermaid class diagram styles */
+      #cd .node rect,
+      #cd .node polygon {
+        stroke-width: 1 !important;
+        rx: 8;
+      }
+
+      /* Loading state */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 60px 0;
+        color: var(--text-tertiary);
+        font-size: 13px;
+      }
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-top-color: var(--purple-stroke);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .footer code {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        background: var(--border);
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+
+      /* Model groups section */
+      .model-groups {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 32px;
+        margin-bottom: 0;
+      }
+
+      .model-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        background: var(--surface);
+      }
+
+      .model-card-title {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
+      }
+      .model-card-desc {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        line-height: 1.5;
+      }
+
+      .mc-purple {
+        border-top: 3px solid var(--purple-stroke);
+      }
+      .mc-purple .model-card-title {
+        color: var(--purple-text);
+      }
+      .mc-teal {
+        border-top: 3px solid var(--teal-stroke);
+      }
+      .mc-teal .model-card-title {
+        color: var(--teal-text);
+      }
+      .mc-amber {
+        border-top: 3px solid var(--amber-stroke);
+      }
+      .mc-amber .model-card-title {
+        color: var(--amber-text);
+      }
+      .mc-coral {
+        border-top: 3px solid var(--coral-stroke);
+      }
+      .mc-coral .model-card-title {
+        color: var(--coral-text);
+      }
+      .mc-gray {
+        border-top: 3px solid var(--gray-stroke);
+      }
+      .mc-gray .model-card-title {
+        color: var(--gray-text);
+      }
+
+      .section-divider {
+        margin: 40px 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .section-divider span {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        white-space: nowrap;
+      }
+      .section-divider hr {
+        flex: 1;
+        border: none;
+        border-top: 1px solid var(--border);
+      }
+
+      @media print {
+        body {
+          padding: 20px;
+          background: white;
+        }
+        .diagram-card {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <div class="header-left">
+          <div class="badge">UML · Class Diagram</div>
+          <h1>SaaS Platform — Domain Model</h1>
+          <p class="subtitle">
+            11 core entities · attributes, methods, and associations
+          </p>
+        </div>
+        <div class="legend">
+          <div class="legend-title">Model groups</div>
+          <div class="legend-items">
+            <span class="legend-item leg-purple"
+              ><span class="legend-dot"></span>Identity &amp; roles</span
+            >
+            <span class="legend-item leg-teal">
+              <span class="legend-dot"></span>Tenancy</span
+            >
+            <span class="legend-item leg-amber">
+              <span class="legend-dot"></span>Modules &amp; plans</span
+            >
+            <span class="legend-item leg-coral">
+              <span class="legend-dot"></span>Configuration</span
+            >
+            <span class="legend-item leg-gray">
+              <span class="legend-dot"></span>Observability</span
+            >
+          </div>
+          <div style="height: 8px"></div>
+          <div class="legend-title">Relationships</div>
+          <div class="rel-key">
+            <div class="rel-item">
+              <div class="rel-line"></div>
+              Association (1..n)
+            </div>
+            <div class="rel-item">
+              <div class="rel-line dashed"></div>
+              Dependency
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="diagram-card">
+        <div id="cd">
+          <div class="loading">
+            <div class="spinner"></div>
+            <span>Rendering class diagram…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider">
+        <hr />
+        <span>Model reference</span>
+        <hr />
+      </div>
+
+      <div class="model-groups">
+        <div class="model-card mc-purple">
+          <div class="model-card-title">User</div>
+          <div class="model-card-desc">
+            Global identity. Holds credentials, links to many tenants via
+            memberships.
+          </div>
+        </div>
+        <div class="model-card mc-teal">
+          <div class="model-card-title">Tenant</div>
+          <div class="model-card-desc">
+            An organization instance. Industry-typed, localization-aware.
+          </div>
+        </div>
+        <div class="model-card mc-teal">
+          <div class="model-card-title">UserTenant</div>
+          <div class="model-card-desc">
+            Membership join. Carries role assignment and context-switch
+            capability.
+          </div>
+        </div>
+        <div class="model-card mc-purple">
+          <div class="model-card-title">Role</div>
+          <div class="model-card-desc">
+            Named permission bundle, scoped per tenant.
+          </div>
+        </div>
+        <div class="model-card mc-purple">
+          <div class="model-card-title">Permission</div>
+          <div class="model-card-desc">
+            Atomic capability, e.g.
+            <code
+              style="
+                font-family:
+                  DM Mono,
+                  monospace;
+                font-size: 10px;
+              "
+              >attendance:write</code
+            >.
+          </div>
+        </div>
+        <div class="model-card mc-purple">
+          <div class="model-card-title">RolePermission</div>
+          <div class="model-card-desc">
+            Many-to-many join between Role and Permission.
+          </div>
+        </div>
+        <div class="model-card mc-amber">
+          <div class="model-card-title">Module</div>
+          <div class="model-card-desc">
+            Domain plugin: school, hospital, HRMS, e-commerce.
+          </div>
+        </div>
+        <div class="model-card mc-amber">
+          <div class="model-card-title">TenantModule</div>
+          <div class="model-card-desc">
+            Activates a module for a specific tenant.
+          </div>
+        </div>
+        <div class="model-card mc-amber">
+          <div class="model-card-title">Subscription</div>
+          <div class="model-card-desc">
+            Plan tier (basic/pro/enterprise) with expiry tracking.
+          </div>
+        </div>
+        <div class="model-card mc-coral">
+          <div class="model-card-title">FeatureToggle</div>
+          <div class="model-card-desc">
+            Per-tenant key/bool flags enabling granular feature rollout.
+          </div>
+        </div>
+        <div class="model-card mc-gray">
+          <div class="model-card-title">AuditLog</div>
+          <div class="model-card-desc">
+            Append-only action record. Stores actor, resource, timestamp.
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Agile SaaS Platform · Domain Class Model</span>
+        <code>UML 2.x · mermaid 11</code>
+      </div>
+    </div>
+
+    <script type="module">
+      import mermaid from "https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      await document.fonts.ready;
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "base",
+        fontFamily: '"DM Sans", sans-serif',
+        themeVariables: {
+          darkMode: dark,
+          fontSize: "13px",
+          fontFamily: '"DM Sans", sans-serif',
+          lineColor: dark ? "#9c9a92" : "#73726c",
+          textColor: dark ? "#c2c0b6" : "#3d3d3a",
+          primaryColor: dark ? "#2a2840" : "#eeedfe",
+          primaryBorderColor: dark ? "#534ab7" : "#534ab7",
+          primaryTextColor: dark ? "#c2c0b6" : "#26215c",
+          secondaryColor: dark ? "#083428" : "#d4f0e6",
+          secondaryBorderColor: dark ? "#0f6e56" : "#0f6e56",
+          secondaryTextColor: dark ? "#9fe1cb" : "#04342c",
+          tertiaryColor: dark ? "#3a2008" : "#faeeda",
+          tertiaryBorderColor: dark ? "#854f0b" : "#854f0b",
+          tertiaryTextColor: dark ? "#fac775" : "#412402",
+          classDiagramGroupFont: 500,
+        },
+      });
+
+      const diagram = `classDiagram
+  direction TB
+
+  class User {
+    +String id
+    +String email
+    +String hashed_password
+    +String full_name
+    +Boolean is_active
+    +DateTime created_at
+    +register()
+    +login()
+  }
+
+  class Tenant {
+    +String id
+    +String name
+    +String slug
+    +TenantIndustry industry
+    +String country
+    +String currency
+    +String timezone
+    +Boolean is_active
+    +create()
+    +deactivate()
+  }
+
+  class UserTenant {
+    +String id
+    +String user_id
+    +String tenant_id
+    +String role_id
+    +Boolean is_active
+    +DateTime joined_at
+    +switchContext()
+  }
+
+  class Role {
+    +String id
+    +String name
+    +String tenant_id
+    +assignPermission()
+    +removePermission()
+  }
+
+  class Permission {
+    +String id
+    +String name
+    +String description
+  }
+
+  class RolePermission {
+    +String id
+    +String role_id
+    +String permission_id
+  }
+
+  class Module {
+    +String id
+    +String name
+    +String description
+    +Boolean is_active
+  }
+
+  class TenantModule {
+    +String id
+    +String tenant_id
+    +String module_id
+    +Boolean is_enabled
+    +DateTime enabled_at
+    +enable()
+    +disable()
+  }
+
+  class Subscription {
+    +String id
+    +String tenant_id
+    +SubscriptionPlan plan
+    +Boolean is_active
+    +DateTime started_at
+    +DateTime expires_at
+    +activate()
+    +cancel()
+  }
+
+  class FeatureToggle {
+    +String id
+    +String tenant_id
+    +String feature_key
+    +Boolean is_enabled
+    +toggle()
+  }
+
+  class AuditLog {
+    +String id
+    +String user_id
+    +String tenant_id
+    +String action
+    +String resource
+    +String details
+    +DateTime created_at
+    +append()
+  }
+
+  User "1" --> "0..*" UserTenant : has memberships
+  Tenant "1" --> "0..*" UserTenant : contains
+  Role "1" --> "0..*" UserTenant : assigned via
+  Role "1" --> "0..*" RolePermission : grants
+  Permission "1" --> "0..*" RolePermission : used in
+  Tenant "1" --> "0..*" TenantModule : enables
+  Module "1" --> "0..*" TenantModule : used by
+  Tenant "1" --> "0..*" Subscription : has
+  Tenant "1" --> "0..*" FeatureToggle : configures
+  User "1" --> "0..*" AuditLog : generates
+`;
+
+      try {
+        const { svg } = await mermaid.render("cd-svg", diagram);
+        document.getElementById("cd").innerHTML = svg;
+
+        // Round entity box corners
+        document.querySelectorAll("#cd svg .node").forEach((node) => {
+          const firstPath = node.querySelector("path[d]");
+          if (!firstPath) return;
+          const d = firstPath.getAttribute("d");
+          const nums = d.match(/-?[\d.]+/g)?.map(Number);
+          if (!nums || nums.length < 8) return;
+          const xs = [nums[0], nums[2], nums[4], nums[6]];
+          const ys = [nums[1], nums[3], nums[5], nums[7]];
+          const x = Math.min(...xs),
+            y = Math.min(...ys);
+          const w = Math.max(...xs) - x,
+            h = Math.max(...ys) - y;
+          const rect = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "rect",
+          );
+          rect.setAttribute("x", x);
+          rect.setAttribute("y", y);
+          rect.setAttribute("width", w);
+          rect.setAttribute("height", h);
+          rect.setAttribute("rx", "8");
+          for (const a of [
+            "fill",
+            "stroke",
+            "stroke-width",
+            "class",
+            "style",
+          ]) {
+            if (firstPath.hasAttribute(a))
+              rect.setAttribute(a, firstPath.getAttribute(a));
+          }
+          firstPath.replaceWith(rect);
+        });
+
+        // Strip row borders from attribute rows
+        document
+          .querySelectorAll(
+            "#cd svg .row-rect-odd path, #cd svg .row-rect-even path",
+          )
+          .forEach((p) => {
+            p.setAttribute("stroke", "none");
+          });
+      } catch (e) {
+        document.getElementById("cd").innerHTML =
+          `<div style="padding:40px;color:#993c1d;font-size:13px">Error rendering diagram: ${e.message}</div>`;
+      }
+    </script>
+  </body>
+</html>
