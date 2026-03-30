@@ -45,4 +45,4 @@ export NEXT_PUBLIC_API_BASE_URL="$API_URL"
 FRONTEND_PORT="${FRONTEND_PORT:-8888}"
 
 echo "[dev] Frontend: http://127.0.0.1:$FRONTEND_PORT"
-npm run dev -- -p "$FRONTEND_PORT"
+npm run dev -- --port "$FRONTEND_PORT"

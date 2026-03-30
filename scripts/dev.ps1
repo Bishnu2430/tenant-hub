@@ -37,4 +37,4 @@ if (-not (Test-Path "node_modules")) {
   $frontendPort = if ($env:FRONTEND_PORT) { $env:FRONTEND_PORT } else { "8888" }
   Write-Host "[dev] Frontend: http://127.0.0.1:$frontendPort"
 
-  npm run dev -- -p $frontendPort
+  npm run dev -- --port $frontendPort
