@@ -34,6 +34,10 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id, User.is_active == True, User.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    token_ver = payload.get("ver", 0)
+    if token_ver != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
     return user
 
 def get_current_context(
@@ -65,6 +69,10 @@ def get_current_context(
     )
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    token_ver = payload.get("ver", 0)
+    if token_ver != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
 
     membership = (
         db.query(UserTenant)

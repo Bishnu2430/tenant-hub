@@ -39,6 +39,7 @@ class User(Base):
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
+    token_version = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     memberships = relationship("UserTenant", back_populates="user")

@@ -1,8 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.schemas.schemas import RegisterRequest, LoginRequest, SwitchContextRequest, UserOut, SwitchContextResponse
-from app.services.auth_service import register_user, login_user, switch_context
+from app.schemas.schemas import (
+    ChangePasswordRequest,
+    LoginRequest,
+    MessageResponse,
+    RegisterRequest,
+    SwitchContextRequest,
+    SwitchContextResponse,
+    UserOut,
+)
+from app.services.auth_service import change_password, login_user, register_user, revoke_tokens, switch_context
 from app.core.dependencies import get_current_user
 from app.models.models import User
 from app.core.rate_limit import rate_limiter
@@ -44,3 +52,26 @@ def switch(
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/logout", response_model=MessageResponse)
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    revoke_tokens(current_user, db)
+    return {"message": "Logged out"}
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_my_password(
+    request: Request,
+    data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    key = f"change-password:{request.client.host if request.client else 'unknown'}:{current_user.id}"
+    if not rate_limiter.allow(key, limit=10, window_seconds=600):
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+    change_password(current_user, data.current_password, data.new_password, db)
+    return {"message": "Password changed"}
