@@ -17,6 +17,14 @@ function apiErrorToString(err: unknown): string {
   return "Unexpected error";
 }
 
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  Admin: "Full administrative access and control over all tenant settings",
+  Member: "Standard member with limited permissions",
+  Manager: "Can manage team members and view reports",
+  Editor: "Can create and edit content",
+  Viewer: "Read-only access to tenant data",
+};
+
 export default function MembersPage() {
   const { state } = useAuth();
   const tenantId = state.tenantId;
@@ -161,7 +169,13 @@ export default function MembersPage() {
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">
+                  Role
+                  <span className="text-zinc-400 font-normal">
+                    {" "}
+                    — what permissions will they have?
+                  </span>
+                </Label>
                 <select
                   id="role"
                   className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
@@ -169,12 +183,19 @@ export default function MembersPage() {
                   onChange={(e) => setRoleId(e.target.value)}
                   required
                 >
+                  <option value="">Select a role...</option>
                   {(roles ?? []).map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>
                   ))}
                 </select>
+                {roleId && (
+                  <p className="text-xs text-zinc-600 mt-1">
+                    {ROLE_DESCRIPTIONS[roleId] ||
+                      "Select a role to see description"}
+                  </p>
+                )}
               </div>
             </div>
 

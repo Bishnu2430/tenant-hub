@@ -177,36 +177,55 @@ export default function TenantsPage() {
                 }}
               >
                 <div className="space-y-1">
-                  <Label htmlFor="tname">Tenant name</Label>
+                  <Label htmlFor="tname">
+                    Tenant name
+                    <span className="text-zinc-400 font-normal">
+                      {" "}
+                      — The official name of your organization
+                    </span>
+                  </Label>
                   <Input
                     id="tname"
                     value={createForm.name}
                     onChange={(e) =>
                       setCreateForm((s) => ({ ...s, name: e.target.value }))
                     }
-                    placeholder="Acme School"
+                    placeholder="e.g., Acme School, City Hospital"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="tslug">Slug</Label>
+                  <Label htmlFor="tslug">
+                    Slug
+                    <span className="text-zinc-400 font-normal">
+                      {" "}
+                      — Unique identifier used in URLs (lowercase, hyphens only)
+                    </span>
+                  </Label>
                   <Input
                     id="tslug"
                     value={createForm.slug}
                     onChange={(e) =>
                       setCreateForm((s) => ({ ...s, slug: e.target.value }))
                     }
-                    placeholder="acme-school"
+                    placeholder="e.g., acme-school, city-hospital"
                     required
                   />
-                  <p className="text-xs text-zinc-500">
-                    Used in URLs and must be unique.
+                  <p className="text-xs text-emerald-700 mt-1">
+                    ✓ Must be unique and cannot be changed later. Use lowercase
+                    letters, numbers, and hyphens.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="industry">Industry</Label>
+                  <Label htmlFor="industry">
+                    Industry
+                    <span className="text-zinc-400 font-normal">
+                      {" "}
+                      — Type of organization (affects features)
+                    </span>
+                  </Label>
                   <select
                     id="industry"
                     className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
@@ -218,11 +237,23 @@ export default function TenantsPage() {
                       }))
                     }
                   >
-                    <option value="school">School</option>
-                    <option value="hospital">Hospital</option>
-                    <option value="hrms">HRMS</option>
-                    <option value="ecommerce">E-Commerce</option>
+                    <option value="school">
+                      🏫 School — Educational institutions
+                    </option>
+                    <option value="hospital">
+                      🏥 Hospital — Healthcare facilities
+                    </option>
+                    <option value="hrms">
+                      👥 HRMS — Human Resource Management
+                    </option>
+                    <option value="ecommerce">
+                      🛍️ E-Commerce — Online retail
+                    </option>
                   </select>
+                  <p className="text-xs text-zinc-600 mt-1">
+                    This determines available modules and default roles for your
+                    organization.
+                  </p>
                 </div>
 
                 {createError ? (

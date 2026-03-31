@@ -41,3 +41,26 @@ export type SwitchContextResponse = {
   tenant_id: string;
   role: string;
 };
+
+export type PermissionOut = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
+export type ModuleOut = {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+};
+
+export type AuditLogOut = {
+  id: string;
+  user_id?: string | null;
+  tenant_id?: string | null;
+  action: string;
+  resource?: string | null;
+  details?: string | null;
+  created_at: string;
+};
