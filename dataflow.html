@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Flow Diagram — SaaS Platform</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #f7f6f2;
+        --surface: #ffffff;
+        --border: #e2e0d8;
+        --border-strong: #c8c5ba;
+        --text-primary: #1a1916;
+        --text-secondary: #5a5851;
+        --text-tertiary: #9a9890;
+        --teal-fill: #d4f0e6;
+        --teal-stroke: #0f6e56;
+        --teal-text: #085041;
+        --purple-fill: #eeedfe;
+        --purple-stroke: #534ab7;
+        --purple-text: #26215c;
+        --amber-fill: #faeeda;
+        --amber-stroke: #854f0b;
+        --amber-text: #412402;
+        --coral-fill: #faece7;
+        --coral-stroke: #993c1d;
+        --coral-text: #4a1b0c;
+        --gray-fill: #f1efe8;
+        --gray-stroke: #5f5e5a;
+        --gray-text: #2c2c2a;
+        --flow-color: #73726c;
+        --db-fill: #fdf9f0;
+        --db-stroke: #c8a84b;
+        --db-text: #5c4a10;
+      }
+
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        min-height: 100vh;
+        padding: 56px 40px;
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .header {
+        margin-bottom: 48px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 32px;
+        flex-wrap: wrap;
+      }
+
+      .header-left {
+        flex: 1;
+        min-width: 260px;
+      }
+
+      .badge {
+        display: inline-block;
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        background: var(--border);
+        border-radius: 4px;
+        padding: 4px 10px;
+        margin-bottom: 14px;
+      }
+      h1 {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+
+      .legend {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .legend-title {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 2px;
+      }
+      .legend-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 12px 5px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid;
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .leg-ext {
+        background: var(--gray-fill);
+        border-color: var(--gray-stroke);
+        color: var(--gray-text);
+      }
+      .leg-ext .legend-dot {
+        background: var(--gray-stroke);
+      }
+      .leg-proc {
+        background: var(--teal-fill);
+        border-color: var(--teal-stroke);
+        color: var(--teal-text);
+      }
+      .leg-proc .legend-dot {
+        background: var(--teal-stroke);
+      }
+      .leg-auth {
+        background: var(--purple-fill);
+        border-color: var(--purple-stroke);
+        color: var(--purple-text);
+      }
+      .leg-auth .legend-dot {
+        background: var(--purple-stroke);
+      }
+      .leg-rbac {
+        background: var(--coral-fill);
+        border-color: var(--coral-stroke);
+        color: var(--coral-text);
+      }
+      .leg-rbac .legend-dot {
+        background: var(--coral-stroke);
+      }
+      .leg-db {
+        background: var(--db-fill);
+        border-color: var(--db-stroke);
+        color: var(--db-text);
+      }
+      .leg-db .legend-dot {
+        background: var(--db-stroke);
+      }
+      .leg-mw {
+        background: var(--amber-fill);
+        border-color: var(--amber-stroke);
+        color: var(--amber-text);
+      }
+      .leg-mw .legend-dot {
+        background: var(--amber-stroke);
+      }
+
+      .diagram-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 48px 40px 40px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 16px rgba(0, 0, 0, 0.04);
+        overflow-x: auto;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        font-family: "DM Sans", sans-serif;
+      }
+
+      /* External entities — double-border rectangles */
+      .ext rect {
+        fill: var(--gray-fill);
+        stroke: var(--gray-stroke);
+        stroke-width: 1.2;
+      }
+      .ext rect.inner {
+        fill: none;
+        stroke: var(--gray-stroke);
+        stroke-width: 0.6;
+      }
+      .ext text {
+        font-family: "DM Sans", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        fill: var(--gray-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+
+      /* Processes — rounded rectangles */
+      .proc rect {
+        fill: var(--teal-fill);
+        stroke: var(--teal-stroke);
+        stroke-width: 1.2;
+        rx: 10;
+      }
+      .proc text {
+        font-family: "DM Sans", sans-serif;
+        font-size: 11.5px;
+        font-weight: 500;
+        fill: var(--teal-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .proc .pid {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        font-weight: 500;
+        fill: var(--teal-stroke);
+        text-anchor: middle;
+      }
+
+      /* Auth/middleware processes */
+      .auth-proc rect {
+        fill: var(--purple-fill);
+        stroke: var(--purple-stroke);
+        stroke-width: 1.2;
+      }
+      .auth-proc text {
+        font-family: "DM Sans", sans-serif;
+        font-size: 11.5px;
+        font-weight: 500;
+        fill: var(--purple-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .auth-proc .pid {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        font-weight: 500;
+        fill: var(--purple-stroke);
+        text-anchor: middle;
+      }
+
+      /* RBAC processes */
+      .rbac-proc rect {
+        fill: var(--coral-fill);
+        stroke: var(--coral-stroke);
+        stroke-width: 1.2;
+      }
+      .rbac-proc text {
+        font-family: "DM Sans", sans-serif;
+        font-size: 11.5px;
+        font-weight: 500;
+        fill: var(--coral-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .rbac-proc .pid {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        font-weight: 500;
+        fill: var(--coral-stroke);
+        text-anchor: middle;
+      }
+
+      /* Middleware */
+      .mw-proc rect {
+        fill: var(--amber-fill);
+        stroke: var(--amber-stroke);
+        stroke-width: 1.2;
+      }
+      .mw-proc text {
+        font-family: "DM Sans", sans-serif;
+        font-size: 11.5px;
+        font-weight: 500;
+        fill: var(--amber-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .mw-proc .pid {
+        font-family: "DM Mono", monospace;
+        font-size: 9px;
+        font-weight: 500;
+        fill: var(--amber-stroke);
+        text-anchor: middle;
+      }
+
+      /* Data stores — open-ended rectangles (Yourdon notation) */
+      .ds-top {
+        fill: none;
+        stroke: var(--db-stroke);
+        stroke-width: 1.4;
+      }
+      .ds-body {
+        fill: var(--db-fill);
+        stroke: var(--db-stroke);
+        stroke-width: 1.4;
+      }
+      .ds-label {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        font-weight: 500;
+        fill: var(--db-stroke);
+        text-anchor: start;
+        dominant-baseline: central;
+      }
+      .ds-name {
+        font-family: "DM Sans", sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        fill: var(--db-text);
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+
+      /* Flow arrows */
+      .flow {
+        stroke: var(--flow-color);
+        stroke-width: 1;
+        fill: none;
+      }
+      .flow-label {
+        font-family: "DM Sans", sans-serif;
+        font-size: 10.5px;
+        fill: var(--text-secondary);
+        text-anchor: middle;
+      }
+      .flow-label.mono {
+        font-family: "DM Mono", monospace;
+        font-size: 9.5px;
+        fill: var(--text-tertiary);
+      }
+
+      /* Zone boundaries */
+      .zone {
+        fill: none;
+        stroke-width: 0.8;
+        stroke-dasharray: 6 3;
+      }
+      .zone-label {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+      }
+
+      .footer {
+        margin-top: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--text-tertiary);
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .footer code {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        background: var(--border);
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+
+      .section-divider {
+        margin: 40px 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .section-divider span {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        white-space: nowrap;
+      }
+      .section-divider hr {
+        flex: 1;
+        border: none;
+        border-top: 1px solid var(--border);
+      }
+
+      .key-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 0;
+      }
+      .key-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        background: var(--surface);
+      }
+      .key-card-title {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .key-card-desc {
+        font-size: 11px;
+        color: var(--text-tertiary);
+        line-height: 1.5;
+      }
+      .kc-gray {
+        border-top: 3px solid var(--gray-stroke);
+      }
+      .kc-gray .key-card-title {
+        color: var(--gray-text);
+      }
+      .kc-teal {
+        border-top: 3px solid var(--teal-stroke);
+      }
+      .kc-teal .key-card-title {
+        color: var(--teal-text);
+      }
+      .kc-purple {
+        border-top: 3px solid var(--purple-stroke);
+      }
+      .kc-purple .key-card-title {
+        color: var(--purple-text);
+      }
+      .kc-coral {
+        border-top: 3px solid var(--coral-stroke);
+      }
+      .kc-coral .key-card-title {
+        color: var(--coral-text);
+      }
+      .kc-db {
+        border-top: 3px solid var(--db-stroke);
+      }
+      .kc-db .key-card-title {
+        color: var(--db-text);
+      }
+      .kc-amber {
+        border-top: 3px solid var(--amber-stroke);
+      }
+      .kc-amber .key-card-title {
+        color: var(--amber-text);
+      }
+
+      @media print {
+        body {
+          padding: 20px;
+          background: white;
+        }
+        .diagram-card {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <div class="header-left">
+          <div class="badge">DFD · Level 1 Data Flow Diagram</div>
+          <h1>SaaS Platform — Data Flow</h1>
+          <p class="subtitle">
+            Request lifecycle from client to database · JWT auth, RBAC, rate
+            limiting, and audit trail
+          </p>
+        </div>
+        <div class="legend">
+          <div class="legend-title">Symbol key</div>
+          <div class="legend-items">
+            <span class="legend-item leg-ext"
+              ><span class="legend-dot"></span>External entity</span
+            >
+            <span class="legend-item leg-proc"
+              ><span class="legend-dot"></span>API process</span
+            >
+            <span class="legend-item leg-auth"
+              ><span class="legend-dot"></span>Auth / session</span
+            >
+            <span class="legend-item leg-rbac"
+              ><span class="legend-dot"></span>RBAC check</span
+            >
+            <span class="legend-item leg-mw"
+              ><span class="legend-dot"></span>Middleware</span
+            >
+            <span class="legend-item leg-db"
+              ><span class="legend-dot"></span>Data store</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="diagram-card">
+        <svg viewBox="0 0 1020 980" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker
+              id="arr"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
+            >
+              <path
+                d="M1 1L9 5L1 9"
+                fill="none"
+                stroke="#73726c"
+                stroke-width="1.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </marker>
+            <marker
+              id="arr-sm"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto"
+            >
+              <path
+                d="M1 1L9 5L1 9"
+                fill="none"
+                stroke="#73726c"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </marker>
+          </defs>
+
+          <!-- ── Zone backgrounds ── -->
+          <!-- Client zone -->
+          <rect
+            class="zone"
+            x="8"
+            y="8"
+            width="150"
+            height="960"
+            rx="12"
+            stroke="#c8c5ba"
+          />
+          <text
+            class="zone-label"
+            x="83"
+            y="24"
+            text-anchor="middle"
+            font-size="10"
+            fill="#9a9890"
+            letter-spacing="0.06em"
+          >
+            CLIENT
+          </text>
+
+          <!-- Middleware zone -->
+          <rect
+            class="zone"
+            x="168"
+            y="8"
+            width="216"
+            height="960"
+            rx="12"
+            stroke="#c8a84b"
+            fill="#faeeda"
+            fill-opacity="0.06"
+          />
+          <text
+            class="zone-label"
+            x="276"
+            y="24"
+            text-anchor="middle"
+            font-size="10"
+            fill="#854f0b"
+            letter-spacing="0.06em"
+          >
+            MIDDLEWARE
+          </text>
+
+          <!-- API core zone -->
+          <rect
+            class="zone"
+            x="394"
+            y="8"
+            width="340"
+            height="960"
+            rx="12"
+            stroke="#0f6e56"
+            fill="#d4f0e6"
+            fill-opacity="0.05"
+          />
+          <text
+            class="zone-label"
+            x="564"
+            y="24"
+            text-anchor="middle"
+            font-size="10"
+            fill="#0f6e56"
+            letter-spacing="0.06em"
+          >
+            API CORE
+          </text>
+
+          <!-- Data store zone -->
+          <rect
+            class="zone"
+            x="744"
+            y="8"
+            width="268"
+            height="960"
+            rx="12"
+            stroke="#c8a84b"
+            fill="#fdf9f0"
+            fill-opacity="0.1"
+          />
+          <text
+            class="zone-label"
+            x="878"
+            y="24"
+            text-anchor="middle"
+            font-size="10"
+            fill="#854f0b"
+            letter-spacing="0.06em"
+          >
+            DATA STORES
+          </text>
+
+          <!-- ── External Entities ── -->
+
+          <!-- Browser / Frontend -->
+          <g class="ext">
+            <rect x="20" y="60" width="126" height="50" rx="4" />
+            <rect x="24" y="64" width="118" height="42" rx="2" />
+            <text x="83" y="84">Browser /</text>
+            <text x="83" y="98">Frontend</text>
+          </g>
+
+          <!-- Rate Limiter (middleware) -->
+          <g class="mw-proc">
+            <rect x="182" y="60" width="188" height="50" rx="10" />
+            <text x="276" y="77" class="pid">MW.1</text>
+            <text x="276" y="93">Rate Limiter</text>
+          </g>
+
+          <!-- Request ID Middleware -->
+          <g class="mw-proc">
+            <rect x="182" y="150" width="188" height="50" rx="10" />
+            <text x="276" y="167" class="pid">MW.2</text>
+            <text x="276" y="183">Attach Request ID</text>
+          </g>
+
+          <!-- CORS Middleware -->
+          <g class="mw-proc">
+            <rect x="182" y="240" width="188" height="50" rx="10" />
+            <text x="276" y="257" class="pid">MW.3</text>
+            <text x="276" y="273">CORS Validation</text>
+          </g>
+
+          <!-- Router -->
+          <g class="proc">
+            <rect x="408" y="60" width="160" height="50" rx="10" />
+            <text x="488" y="77" class="pid">P.1</text>
+            <text x="488" y="93">FastAPI Router</text>
+          </g>
+
+          <!-- JWT decode -->
+          <g class="auth-proc">
+            <rect x="408" y="150" width="160" height="50" rx="10" />
+            <text x="488" y="167" class="pid">P.2</text>
+            <text x="488" y="183">JWT Decode</text>
+          </g>
+
+          <!-- Token version check -->
+          <g class="auth-proc">
+            <rect x="408" y="240" width="160" height="50" rx="10" />
+            <text x="488" y="257" class="pid">P.3</text>
+            <text x="488" y="273">Token Version Check</text>
+          </g>
+
+          <!-- Tenant context resolve -->
+          <g class="auth-proc">
+            <rect x="408" y="330" width="160" height="50" rx="10" />
+            <text x="488" y="347" class="pid">P.4</text>
+            <text x="488" y="363">Tenant Context Resolve</text>
+          </g>
+
+          <!-- RBAC permission check -->
+          <g class="rbac-proc">
+            <rect x="408" y="420" width="160" height="50" rx="10" />
+            <text x="488" y="437" class="pid">P.5</text>
+            <text x="488" y="453">RBAC Permission Check</text>
+          </g>
+
+          <!-- Business logic -->
+          <g class="proc">
+            <rect x="408" y="520" width="160" height="50" rx="10" />
+            <text x="488" y="537" class="pid">P.6</text>
+            <text x="488" y="553">Business Logic</text>
+          </g>
+
+          <!-- Audit write -->
+          <g class="proc">
+            <rect x="408" y="620" width="160" height="50" rx="10" />
+            <text x="488" y="637" class="pid">P.7</text>
+            <text x="488" y="653">Audit Log Write</text>
+          </g>
+
+          <!-- Response serialise -->
+          <g class="proc">
+            <rect x="408" y="720" width="160" height="50" rx="10" />
+            <text x="488" y="737" class="pid">P.8</text>
+            <text x="488" y="753">Response Serialise</text>
+          </g>
+
+          <!-- Error handler -->
+          <g class="proc">
+            <rect x="600" y="330" width="130" height="50" rx="10" />
+            <text x="665" y="347" class="pid">P.9</text>
+            <text x="665" y="363">Error Handler</text>
+          </g>
+
+          <!-- ── Data Stores ── -->
+
+          <!-- D1 Users -->
+          <line
+            class="ds-top"
+            x1="760"
+            y1="70"
+            x2="760"
+            y2="90"
+            stroke-width="1.4"
+          />
+          <rect class="ds-body" x="760" y="70" width="230" height="38" rx="0" />
+          <line
+            x1="760"
+            y1="70"
+            x2="990"
+            y2="70"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="108"
+            x2="990"
+            y2="108"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="90">D1</text>
+          <text class="ds-name" x="878" y="90">Users</text>
+
+          <!-- D2 Tenants -->
+          <rect class="ds-body" x="760" y="158" width="230" height="38" />
+          <line
+            x1="760"
+            y1="158"
+            x2="990"
+            y2="158"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="196"
+            x2="990"
+            y2="196"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="178">D2</text>
+          <text class="ds-name" x="878" y="178">Tenants</text>
+
+          <!-- D3 UserTenants -->
+          <rect class="ds-body" x="760" y="248" width="230" height="38" />
+          <line
+            x1="760"
+            y1="248"
+            x2="990"
+            y2="248"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="286"
+            x2="990"
+            y2="286"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="268">D3</text>
+          <text class="ds-name" x="878" y="268">UserTenants</text>
+
+          <!-- D4 Roles / Permissions -->
+          <rect class="ds-body" x="760" y="338" width="230" height="38" />
+          <line
+            x1="760"
+            y1="338"
+            x2="990"
+            y2="338"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="376"
+            x2="990"
+            y2="376"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="358">D4</text>
+          <text class="ds-name" x="878" y="358">Roles / Permissions</text>
+
+          <!-- D5 Modules / TenantModules -->
+          <rect class="ds-body" x="760" y="428" width="230" height="38" />
+          <line
+            x1="760"
+            y1="428"
+            x2="990"
+            y2="428"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="466"
+            x2="990"
+            y2="466"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="448">D5</text>
+          <text class="ds-name" x="878" y="448">Modules / TenantModules</text>
+
+          <!-- D6 Subscriptions / Features -->
+          <rect class="ds-body" x="760" y="518" width="230" height="38" />
+          <line
+            x1="760"
+            y1="518"
+            x2="990"
+            y2="518"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="556"
+            x2="990"
+            y2="556"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="538">D6</text>
+          <text class="ds-name" x="878" y="538">Subscriptions / Features</text>
+
+          <!-- D7 AuditLogs -->
+          <rect class="ds-body" x="760" y="618" width="230" height="38" />
+          <line
+            x1="760"
+            y1="618"
+            x2="990"
+            y2="618"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="656"
+            x2="990"
+            y2="656"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="638">D7</text>
+          <text class="ds-name" x="878" y="638">AuditLogs</text>
+
+          <!-- D8 Rate Limiter (in-memory) -->
+          <rect class="ds-body" x="760" y="708" width="230" height="38" />
+          <line
+            x1="760"
+            y1="708"
+            x2="990"
+            y2="708"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <line
+            x1="760"
+            y1="746"
+            x2="990"
+            y2="746"
+            stroke="#c8a84b"
+            stroke-width="1.4"
+          />
+          <text class="ds-label" x="766" y="728">D8</text>
+          <text class="ds-name" x="878" y="728">Rate Limit Store (memory)</text>
+
+          <!-- ── MAIN FLOW ARROWS ── -->
+
+          <!-- Browser → Rate Limiter -->
+          <line
+            class="flow"
+            x1="146"
+            y1="85"
+            x2="180"
+            y2="85"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="163" y="79">HTTP req</text>
+
+          <!-- Rate Limiter → Attach Request ID -->
+          <line
+            class="flow"
+            x1="276"
+            y1="110"
+            x2="276"
+            y2="148"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="310" y="133">allowed</text>
+
+          <!-- Rate Limiter → D8 check -->
+          <line
+            class="flow"
+            x1="370"
+            y1="85"
+            x2="758"
+            y2="727"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="620" y="380">check / update</text>
+
+          <!-- Attach Request ID → CORS -->
+          <line
+            class="flow"
+            x1="276"
+            y1="200"
+            x2="276"
+            y2="238"
+            marker-end="url(#arr)"
+          />
+
+          <!-- CORS → Router -->
+          <line
+            class="flow"
+            x1="370"
+            y1="265"
+            x2="406"
+            y2="85"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="400" y="185">routed request</text>
+
+          <!-- Router → JWT Decode -->
+          <line
+            class="flow"
+            x1="488"
+            y1="110"
+            x2="488"
+            y2="148"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label mono" x="528" y="133">Bearer token</text>
+
+          <!-- JWT Decode → Token Version Check -->
+          <line
+            class="flow"
+            x1="488"
+            y1="200"
+            x2="488"
+            y2="238"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label mono" x="534" y="223">user_id, ver</text>
+
+          <!-- Token version check → D1 Users (read) -->
+          <line
+            class="flow"
+            x1="568"
+            y1="255"
+            x2="758"
+            y2="85"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="700" y="172">lookup user +</text>
+          <text class="flow-label" x="700" y="184">token_version</text>
+
+          <!-- Token version check → Tenant Context -->
+          <line
+            class="flow"
+            x1="488"
+            y1="290"
+            x2="488"
+            y2="328"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label mono" x="536" y="313">valid user</text>
+
+          <!-- Tenant Context → D3 UserTenants -->
+          <line
+            class="flow"
+            x1="568"
+            y1="348"
+            x2="758"
+            y2="265"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="694" y="298">membership</text>
+          <text class="flow-label" x="694" y="310">lookup</text>
+
+          <!-- Tenant Context → D2 Tenants -->
+          <line
+            class="flow"
+            x1="568"
+            y1="342"
+            x2="758"
+            y2="175"
+            marker-end="url(#arr)"
+          />
+
+          <!-- Tenant Context → RBAC -->
+          <line
+            class="flow"
+            x1="488"
+            y1="380"
+            x2="488"
+            y2="418"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label mono" x="536" y="403">RequestContext</text>
+
+          <!-- RBAC → D4 Roles/Perms -->
+          <line
+            class="flow"
+            x1="568"
+            y1="445"
+            x2="758"
+            y2="355"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="694" y="393">role + perm</text>
+          <text class="flow-label" x="694" y="405">lookup</text>
+
+          <!-- RBAC → Error Handler (403 forbidden) -->
+          <line
+            class="flow"
+            x1="568"
+            y1="432"
+            x2="598"
+            y2="355"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="591" y="388">403</text>
+
+          <!-- RBAC → Business Logic -->
+          <line
+            class="flow"
+            x1="488"
+            y1="470"
+            x2="488"
+            y2="518"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label mono" x="534" y="498">authorized</text>
+
+          <!-- Business Logic → D5 Modules -->
+          <line
+            class="flow"
+            x1="568"
+            y1="545"
+            x2="758"
+            y2="445"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="702" y="490">r/w module data</text>
+
+          <!-- Business Logic → D6 Subscriptions/Features -->
+          <line
+            class="flow"
+            x1="568"
+            y1="548"
+            x2="758"
+            y2="535"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="706" y="536">r/w subs +</text>
+          <text class="flow-label" x="706" y="548">features</text>
+
+          <!-- Business Logic → Audit Write -->
+          <line
+            class="flow"
+            x1="488"
+            y1="570"
+            x2="488"
+            y2="618"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="534" y="598">action data</text>
+
+          <!-- Audit Write → D7 AuditLogs -->
+          <line
+            class="flow"
+            x1="568"
+            y1="645"
+            x2="758"
+            y2="637"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="700" y="633">append row</text>
+
+          <!-- Business Logic → Response Serialise -->
+          <line
+            class="flow"
+            x1="420"
+            y1="570"
+            x2="420"
+            y2="718"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="388" y="650">result</text>
+          <text class="flow-label" x="388" y="662">data</text>
+
+          <!-- Response Serialise → Browser -->
+          <path
+            class="flow"
+            d="M 408 745 Q 120 745 120 810 Q 120 875 146 875"
+            marker-end="url(#arr)"
+          />
+          <text class="flow-label" x="220" y="798">JSON response</text>
+          <text class="flow-label mono" x="220" y="812">+ x-request-id</text>
+
+          <!-- Error Handler → Browser (error response) -->
+          <path
+            class="flow"
+            d="M 600 365 Q 120 365 120 420 Q 120 490 146 490"
+            marker-end="url(#arr)"
+            stroke-dasharray="4 3"
+          />
+
+          <!-- Browser (response receipt) -->
+          <g class="ext">
+            <rect x="20" y="840" width="126" height="50" rx="4" />
+            <rect x="24" y="844" width="118" height="42" rx="2" />
+            <text x="83" y="860">Browser /</text>
+            <text x="83" y="874">Frontend</text>
+          </g>
+
+          <!-- Browser (error response) -->
+          <g class="ext">
+            <rect x="20" y="450" width="126" height="50" rx="4" />
+            <rect x="24" y="454" width="118" height="42" rx="2" />
+            <text x="83" y="470">Browser /</text>
+            <text x="83" y="484">Frontend</text>
+          </g>
+
+          <!-- Rate limit reject -->
+          <path
+            class="flow"
+            d="M 276 60 Q 276 40 83 40 Q 83 50 83 58"
+            marker-end="url(#arr)"
+            stroke-dasharray="4 3"
+          />
+          <text class="flow-label" x="176" y="36">429 rate limited</text>
+
+          <!-- Small annotation labels -->
+          <text
+            class="flow-label mono"
+            x="83"
+            y="830"
+            text-anchor="middle"
+            font-size="9"
+            fill="#9a9890"
+          >
+            ← success path
+          </text>
+          <text
+            class="flow-label mono"
+            x="83"
+            y="440"
+            text-anchor="middle"
+            font-size="9"
+            fill="#9a9890"
+          >
+            ← error path
+          </text>
+        </svg>
+      </div>
+
+      <div class="section-divider">
+        <hr />
+        <span>Process &amp; store reference</span>
+        <hr />
+      </div>
+
+      <div class="key-grid">
+        <div class="key-card kc-amber">
+          <div class="key-card-title">MW.1 — Rate Limiter</div>
+          <div class="key-card-desc">
+            Sliding-window in-memory limiter. 5 req/5 min on register, 10/5 min
+            on login. Returns 429 on exceed.
+          </div>
+        </div>
+        <div class="key-card kc-amber">
+          <div class="key-card-title">MW.2 — Request ID</div>
+          <div class="key-card-desc">
+            Reads X-Request-ID header or generates UUID v4. Stored on
+            request.state and echoed in response header.
+          </div>
+        </div>
+        <div class="key-card kc-amber">
+          <div class="key-card-title">MW.3 — CORS</div>
+          <div class="key-card-desc">
+            FastAPI CORSMiddleware. Currently allows all origins
+            (allow_origins=["*"]). Should be restricted in production.
+          </div>
+        </div>
+        <div class="key-card kc-purple">
+          <div class="key-card-title">P.2 — JWT Decode</div>
+          <div class="key-card-desc">
+            python-jose decodes HS256 JWT. Extracts sub (user_id), tenant_id,
+            and ver (token_version) claims.
+          </div>
+        </div>
+        <div class="key-card kc-purple">
+          <div class="key-card-title">P.3 — Token Version Check</div>
+          <div class="key-card-desc">
+            Compares JWT ver claim against User.token_version. Mismatch =
+            revoked token → 401. Enables instant logout-all.
+          </div>
+        </div>
+        <div class="key-card kc-purple">
+          <div class="key-card-title">P.4 — Tenant Context</div>
+          <div class="key-card-desc">
+            Resolves tenant_id from JWT, verifies active UserTenant membership,
+            builds RequestContext(user, tenant_id, role).
+          </div>
+        </div>
+        <div class="key-card kc-coral">
+          <div class="key-card-title">P.5 — RBAC Check</div>
+          <div class="key-card-desc">
+            require_permission() dependency. "Admin" role bypasses check. Others
+            need matching RolePermission row. 403 on failure.
+          </div>
+        </div>
+        <div class="key-card kc-teal">
+          <div class="key-card-title">P.6 — Business Logic</div>
+          <div class="key-card-desc">
+            Endpoint handlers in auth, tenants, roles, modules, audit routers.
+            Reads/writes via SQLAlchemy ORM session.
+          </div>
+        </div>
+        <div class="key-card kc-teal">
+          <div class="key-card-title">P.7 — Audit Log Write</div>
+          <div class="key-card-desc">
+            write_audit_log() appends action, resource, JSON details, IP,
+            request_id, and user-agent to AuditLog table.
+          </div>
+        </div>
+        <div class="key-card kc-db">
+          <div class="key-card-title">D1–D7 — PostgreSQL</div>
+          <div class="key-card-desc">
+            Single Postgres 16 database. SQLAlchemy + psycopg2 driver. Pool with
+            pre-ping enabled. Alembic manages migrations.
+          </div>
+        </div>
+        <div class="key-card kc-db">
+          <div class="key-card-title">D8 — Rate Limit Store</div>
+          <div class="key-card-desc">
+            SlidingWindowRateLimiter — Python dict of deques, thread-safe via
+            threading.Lock(). Resets in-process only; not distributed.
+          </div>
+        </div>
+        <div class="key-card kc-teal">
+          <div class="key-card-title">P.8 — Response Serialise</div>
+          <div class="key-card-desc">
+            Pydantic v2 response_model validation and JSON serialisation.
+            x-request-id header injected by request_id_middleware.
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>Agile SaaS Platform · Level 1 DFD</span>
+        <code>Yourdon–DeMarco notation</code>
+      </div>
+    </div>
+  </body>
+</html>

@@ -100,7 +100,6 @@
         line-height: 1.6;
       }
 
-      /* Legend */
       .legend {
         display: flex;
         flex-direction: column;
@@ -179,7 +178,6 @@
         background: var(--gray-stroke);
       }
 
-      /* Relationship key */
       .rel-key {
         display: flex;
         gap: 20px;
@@ -208,7 +206,6 @@
         );
       }
 
-      /* Diagram card */
       .diagram-card {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -232,14 +229,6 @@
         height: auto;
       }
 
-      /* Override mermaid class diagram styles */
-      #cd .node rect,
-      #cd .node polygon {
-        stroke-width: 1 !important;
-        rx: 8;
-      }
-
-      /* Loading state */
       .loading {
         display: flex;
         align-items: center;
@@ -263,7 +252,6 @@
         }
       }
 
-      /* Footer */
       .footer {
         margin-top: 32px;
         display: flex;
@@ -282,13 +270,11 @@
         border-radius: 4px;
       }
 
-      /* Model groups section */
       .model-groups {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         gap: 12px;
         margin-top: 32px;
-        margin-bottom: 0;
       }
 
       .model-card {
@@ -388,17 +374,17 @@
             <span class="legend-item leg-purple"
               ><span class="legend-dot"></span>Identity &amp; roles</span
             >
-            <span class="legend-item leg-teal">
-              <span class="legend-dot"></span>Tenancy</span
+            <span class="legend-item leg-teal"
+              ><span class="legend-dot"></span>Tenancy</span
             >
-            <span class="legend-item leg-amber">
-              <span class="legend-dot"></span>Modules &amp; plans</span
+            <span class="legend-item leg-amber"
+              ><span class="legend-dot"></span>Modules &amp; plans</span
             >
-            <span class="legend-item leg-coral">
-              <span class="legend-dot"></span>Configuration</span
+            <span class="legend-item leg-coral"
+              ><span class="legend-dot"></span>Configuration</span
             >
-            <span class="legend-item leg-gray">
-              <span class="legend-dot"></span>Observability</span
+            <span class="legend-item leg-gray"
+              ><span class="legend-dot"></span>Observability</span
             >
           </div>
           <div style="height: 8px"></div>
@@ -435,27 +421,30 @@
         <div class="model-card mc-purple">
           <div class="model-card-title">User</div>
           <div class="model-card-desc">
-            Global identity. Holds credentials, links to many tenants via
-            memberships.
+            Global identity. Holds credentials, token_version for revocation,
+            links to many tenants via memberships.
           </div>
         </div>
         <div class="model-card mc-teal">
           <div class="model-card-title">Tenant</div>
           <div class="model-card-desc">
-            An organization instance. Industry-typed, localization-aware.
+            An organization instance. Industry-typed
+            (school/hospital/hrms/ecommerce), localization-aware with country,
+            currency, timezone.
           </div>
         </div>
         <div class="model-card mc-teal">
           <div class="model-card-title">UserTenant</div>
           <div class="model-card-desc">
-            Membership join. Carries role assignment and context-switch
-            capability.
+            Membership join table. Carries role assignment and enables tenant
+            context-switching via JWT.
           </div>
         </div>
         <div class="model-card mc-purple">
           <div class="model-card-title">Role</div>
           <div class="model-card-desc">
-            Named permission bundle, scoped per tenant.
+            Named permission bundle, scoped per tenant. "Admin" is treated as
+            tenant superuser — bypasses RBAC checks.
           </div>
         </div>
         <div class="model-card mc-purple">
@@ -470,43 +459,49 @@
                 font-size: 10px;
               "
               >attendance:write</code
-            >.
+            >. Global registry seeded from DEFAULT_PERMISSIONS.
           </div>
         </div>
         <div class="model-card mc-purple">
           <div class="model-card-title">RolePermission</div>
           <div class="model-card-desc">
-            Many-to-many join between Role and Permission.
+            Many-to-many join between Role and Permission. Checked at runtime by
+            require_permission() dependency.
           </div>
         </div>
         <div class="model-card mc-amber">
           <div class="model-card-title">Module</div>
           <div class="model-card-desc">
-            Domain plugin: school, hospital, HRMS, e-commerce.
+            Domain plugin: school, hospital, HRMS, e-commerce. Global registry;
+            toggled per-tenant via TenantModule.
           </div>
         </div>
         <div class="model-card mc-amber">
           <div class="model-card-title">TenantModule</div>
           <div class="model-card-desc">
-            Activates a module for a specific tenant.
+            Activates a module for a specific tenant. Supports re-enabling
+            (is_enabled flag) without duplicate rows.
           </div>
         </div>
         <div class="model-card mc-amber">
           <div class="model-card-title">Subscription</div>
           <div class="model-card-desc">
-            Plan tier (basic/pro/enterprise) with expiry tracking.
+            Plan tier (basic/pro/enterprise) with expires_at tracking. Old
+            subscriptions deactivated on new plan creation.
           </div>
         </div>
         <div class="model-card mc-coral">
           <div class="model-card-title">FeatureToggle</div>
           <div class="model-card-desc">
-            Per-tenant key/bool flags enabling granular feature rollout.
+            Per-tenant key/bool flags enabling granular feature rollout without
+            code deployment.
           </div>
         </div>
         <div class="model-card mc-gray">
           <div class="model-card-title">AuditLog</div>
           <div class="model-card-desc">
-            Append-only action record. Stores actor, resource, timestamp.
+            Append-only action record. Stores actor, resource, IP, request_id,
+            user-agent, and JSON details payload.
           </div>
         </div>
       </div>
@@ -542,7 +537,6 @@
           tertiaryColor: dark ? "#3a2008" : "#faeeda",
           tertiaryBorderColor: dark ? "#854f0b" : "#854f0b",
           tertiaryTextColor: dark ? "#fac775" : "#412402",
-          classDiagramGroupFont: 500,
         },
       });
 
@@ -555,9 +549,13 @@
     +String hashed_password
     +String full_name
     +Boolean is_active
+    +Boolean is_deleted
+    +Integer token_version
     +DateTime created_at
     +register()
     +login()
+    +changePassword()
+    +revokeTokens()
   }
 
   class Tenant {
@@ -568,7 +566,10 @@
     +String country
     +String currency
     +String timezone
+    +String language
     +Boolean is_active
+    +Boolean is_deleted
+    +DateTime created_at
     +create()
     +deactivate()
   }
@@ -581,14 +582,18 @@
     +Boolean is_active
     +DateTime joined_at
     +switchContext()
+    +activate()
+    +deactivate()
   }
 
   class Role {
     +String id
     +String name
     +String tenant_id
+    +Boolean is_deleted
     +assignPermission()
     +removePermission()
+    +isSuperuser()
   }
 
   class Permission {
@@ -646,6 +651,7 @@
     +String action
     +String resource
     +String details
+    +String ip_address
     +DateTime created_at
     +append()
   }
@@ -660,55 +666,12 @@
   Tenant "1" --> "0..*" Subscription : has
   Tenant "1" --> "0..*" FeatureToggle : configures
   User "1" --> "0..*" AuditLog : generates
+  Tenant "1" --> "0..*" AuditLog : scoped to
 `;
 
       try {
         const { svg } = await mermaid.render("cd-svg", diagram);
         document.getElementById("cd").innerHTML = svg;
-
-        // Round entity box corners
-        document.querySelectorAll("#cd svg .node").forEach((node) => {
-          const firstPath = node.querySelector("path[d]");
-          if (!firstPath) return;
-          const d = firstPath.getAttribute("d");
-          const nums = d.match(/-?[\d.]+/g)?.map(Number);
-          if (!nums || nums.length < 8) return;
-          const xs = [nums[0], nums[2], nums[4], nums[6]];
-          const ys = [nums[1], nums[3], nums[5], nums[7]];
-          const x = Math.min(...xs),
-            y = Math.min(...ys);
-          const w = Math.max(...xs) - x,
-            h = Math.max(...ys) - y;
-          const rect = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "rect",
-          );
-          rect.setAttribute("x", x);
-          rect.setAttribute("y", y);
-          rect.setAttribute("width", w);
-          rect.setAttribute("height", h);
-          rect.setAttribute("rx", "8");
-          for (const a of [
-            "fill",
-            "stroke",
-            "stroke-width",
-            "class",
-            "style",
-          ]) {
-            if (firstPath.hasAttribute(a))
-              rect.setAttribute(a, firstPath.getAttribute(a));
-          }
-          firstPath.replaceWith(rect);
-        });
-
-        // Strip row borders from attribute rows
-        document
-          .querySelectorAll(
-            "#cd svg .row-rect-odd path, #cd svg .row-rect-even path",
-          )
-          .forEach((p) => {
-            p.setAttribute("stroke", "none");
-          });
       } catch (e) {
         document.getElementById("cd").innerHTML =
           `<div style="padding:40px;color:#993c1d;font-size:13px">Error rendering diagram: ${e.message}</div>`;
