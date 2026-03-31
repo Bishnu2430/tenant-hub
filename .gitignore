@@ -2,6 +2,7 @@
 *.db
 
 # Node / Next.js (frontend)
+# Node / Vite (frontend)
 node_modules/
 .next/
 out/

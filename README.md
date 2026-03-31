@@ -6,13 +6,9 @@ Starts:
 
 - Docker Postgres (host port `5433`)
 - Docker API (host port `8080`)
-- Next.js frontend (host port `8888`)
+- Vite + React frontend (host port `8888`)
 
-Windows (PowerShell):
-
-- `powershell -ExecutionPolicy Bypass -File scripts/dev.ps1`
-
-macOS/Linux/Git Bash:
+Windows/macOS/Linux (Git Bash or shell):
 
 - `./scripts/dev.sh`
 
@@ -23,7 +19,7 @@ URLs:
 
 Notes:
 
-- `scripts/dev.*` sets `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080` for the frontend dev server.
+- `scripts/dev.sh` sets `VITE_API_BASE_URL=http://127.0.0.1:8080` for the frontend dev server.
 - Docker Postgres data persists in the named volume `multitenant_pgdata` (see `docker-compose.yml`).
 
 ## Local (Docker + Postgres only)

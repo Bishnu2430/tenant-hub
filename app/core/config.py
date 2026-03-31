@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Safe defaults for local/dev. In production, override via environment variables.
-    DATABASE_URL: str = "sqlite:///./dev.db"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/saas_platform"
     SECRET_KEY: str = "change-me-in-prod"
     ALGORITHM: str = "HS256"
     # Default: 10 days

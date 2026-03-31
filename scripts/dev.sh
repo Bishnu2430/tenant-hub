@@ -3,7 +3,7 @@ set -e
 
 # Start full local dev stack:
 # - Postgres + API via docker compose
-# - Frontend via Next.js dev server
+# - Frontend via Vite dev server
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT_DIR"
@@ -33,7 +33,7 @@ done
 
 echo "[dev] API: $API_URL"
 
-echo "[dev] Starting frontend (Next.js)…"
+echo "[dev] Starting frontend (Vite)…"
 cd "$ROOT_DIR/frontend"
 
 if [ ! -d node_modules ]; then
@@ -41,7 +41,7 @@ if [ ! -d node_modules ]; then
   npm install
 fi
 
-export NEXT_PUBLIC_API_BASE_URL="$API_URL"
+export VITE_API_BASE_URL="$API_URL"
 FRONTEND_PORT="${FRONTEND_PORT:-8888}"
 
 echo "[dev] Frontend: http://127.0.0.1:$FRONTEND_PORT"
