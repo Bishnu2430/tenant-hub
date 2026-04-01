@@ -15,6 +15,40 @@ from app.services.audit_service import write_audit_log
 
 router = APIRouter(tags=["Modules & Subscriptions"])
 
+MODULE_FEATURES: dict[str, list[str]] = {
+    "school": ["attendance", "results", "timetable", "announcement"],
+    "hospital": ["appointment", "prescription", "patient"],
+    "hrms": ["employee", "leave", "payroll"],
+    "ecommerce": ["product", "order", "inventory"],
+}
+
+
+def _ensure_module_features(db: Session, tenant_id: str, module_name: str) -> list[str]:
+    features = MODULE_FEATURES.get((module_name or "").strip().lower(), [])
+    added: list[str] = []
+    for feature_key in features:
+        existing = (
+            db.query(FeatureToggle)
+            .filter(
+                FeatureToggle.tenant_id == tenant_id,
+                FeatureToggle.feature_key == feature_key,
+            )
+            .first()
+        )
+        if existing:
+            existing.is_enabled = True
+            continue
+        db.add(
+            FeatureToggle(
+                id=str(uuid.uuid4()),
+                tenant_id=tenant_id,
+                feature_key=feature_key,
+                is_enabled=True,
+            )
+        )
+        added.append(feature_key)
+    return added
+
 
 # ─── Modules (global) ─────────────────────────────────────────────────────────
 
@@ -67,6 +101,7 @@ def enable_module(
     ).first()
     if existing:
         existing.is_enabled = True
+        added_features = _ensure_module_features(db, tenant_id, module.name)
         db.commit()
         write_audit_log(
             db=db,
@@ -74,11 +109,12 @@ def enable_module(
             request=request,
             action="module:enable",
             resource=f"tenant:{tenant_id}",
-            details={"module_id": data.module_id, "re_enabled": True},
+            details={"module_id": data.module_id, "module_name": module.name, "re_enabled": True, "features_added": added_features},
         )
         return {"message": "Module re-enabled"}
     tm = TenantModule(id=str(uuid.uuid4()), tenant_id=tenant_id, module_id=data.module_id)
     db.add(tm)
+    added_features = _ensure_module_features(db, tenant_id, module.name)
     db.commit()
     write_audit_log(
         db=db,
@@ -86,7 +122,7 @@ def enable_module(
         request=request,
         action="module:enable",
         resource=f"tenant:{tenant_id}",
-        details={"module_id": data.module_id, "re_enabled": False},
+        details={"module_id": data.module_id, "module_name": module.name, "re_enabled": False, "features_added": added_features},
     )
     return {"message": "Module enabled for tenant"}
 
@@ -101,6 +137,10 @@ def get_tenant_modules(
     tms = db.query(TenantModule).filter(
         TenantModule.tenant_id == tenant_id, TenantModule.is_enabled == True
     ).all()
+    for tm in tms:
+        if tm.module:
+            _ensure_module_features(db, tenant_id, tm.module.name)
+    db.commit()
     return [tm.module for tm in tms]
 
 

@@ -3,12 +3,63 @@ from sqlalchemy.orm import Session
 from typing import List
 import uuid
 from app.db.session import get_db
+from app.core.permission_defaults import DEFAULT_PERMISSIONS
 from app.core.dependencies import RequestContext, ensure_path_tenant, get_current_context, require_permission
 from app.models.models import User, Role, Permission, RolePermission
 from app.schemas.schemas import RoleCreate, RoleOut, PermissionCreate, PermissionOut, AssignPermissionRequest
 from app.services.audit_service import write_audit_log
 
 router = APIRouter(tags=["Roles & Permissions"])
+
+DEFAULT_TENANT_ROLES = ("Admin", "Manager", "Member", "Viewer")
+
+
+def _ensure_default_roles_for_tenant(db: Session, tenant_id: str) -> None:
+    permission_index = {p.name: p for p in db.query(Permission).all()}
+    for perm_name, perm_desc in DEFAULT_PERMISSIONS:
+        if perm_name in permission_index:
+            continue
+        perm = Permission(id=str(uuid.uuid4()), name=perm_name, description=perm_desc)
+        db.add(perm)
+        db.flush()
+        permission_index[perm_name] = perm
+
+    read_permissions = {name for name, _ in DEFAULT_PERMISSIONS if name.endswith(":read")}
+    role_permissions: dict[str, set[str]] = {
+        "Admin": set(permission_index.keys()),
+        "Manager": read_permissions | {"tenant:manage", "module:manage"},
+        "Member": read_permissions | {"attendance:write", "leave:write", "order:write"},
+        "Viewer": read_permissions,
+    }
+
+    for role_name in DEFAULT_TENANT_ROLES:
+        role = (
+            db.query(Role)
+            .filter(Role.tenant_id == tenant_id, Role.name == role_name)
+            .first()
+        )
+        if not role:
+            role = Role(id=str(uuid.uuid4()), name=role_name, tenant_id=tenant_id)
+            db.add(role)
+            db.flush()
+        role.is_deleted = False
+
+        expected = role_permissions.get(role_name, set())
+        existing_permission_ids = {
+            rp.permission_id
+            for rp in db.query(RolePermission).filter(RolePermission.role_id == role.id).all()
+        }
+        for permission_name in expected:
+            perm = permission_index.get(permission_name)
+            if not perm or perm.id in existing_permission_ids:
+                continue
+            db.add(
+                RolePermission(
+                    id=str(uuid.uuid4()),
+                    role_id=role.id,
+                    permission_id=perm.id,
+                )
+            )
 
 
 # ─── Roles ────────────────────────────────────────────────────────────────────
@@ -46,6 +97,8 @@ def list_roles(
 ):
     effective_tenant_id = tenant_id or ctx.tenant_id
     ensure_path_tenant(effective_tenant_id, ctx)
+    _ensure_default_roles_for_tenant(db, effective_tenant_id)
+    db.commit()
     return (
         db.query(Role)
         .filter(Role.is_deleted == False, Role.tenant_id == effective_tenant_id)

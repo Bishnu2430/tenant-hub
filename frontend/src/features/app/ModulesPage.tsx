@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/shared/lib/auth-store";
 import { modulesApi } from "@/features/modules/api";
 import { tenantsApi } from "@/features/tenants/api";
+import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/shared/api/client";
 import {
   PageHeader,
@@ -12,13 +14,14 @@ import {
   Spinner,
 } from "@/shared/ui";
 import { Button } from "@/components/ui/button";
-import { Boxes, Check } from "lucide-react";
+import { Boxes, Check, Sparkles, ArrowRight } from "lucide-react";
 
 export default function ModulesPage() {
   const tenantId = useAuthStore((s) => s.selectedTenantId)!;
   const roleName = useAuthStore((s) => s.roleName);
   const canManage = roleName === "Admin" || roleName === "admin";
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const allModulesQuery = useQuery({
     queryKey: ["modules-all"],
@@ -30,11 +33,23 @@ export default function ModulesPage() {
     queryFn: () => tenantsApi.getModules(tenantId),
   });
 
+  const tenantFeaturesQuery = useQuery({
+    queryKey: ["tenant-features", tenantId],
+    queryFn: () => tenantsApi.getFeatures(tenantId),
+  });
+
   const enableMutation = useMutation({
     mutationFn: (moduleId: string) =>
       tenantsApi.enableModule(tenantId, { module_id: moduleId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant-modules", tenantId] });
+      queryClient.invalidateQueries({
+        queryKey: ["tenant-features", tenantId],
+      });
+      toast({
+        title: "Module enabled",
+        description: "Default feature toggles were synced for this module.",
+      });
     },
   });
 
@@ -49,11 +64,16 @@ export default function ModulesPage() {
     );
 
   const enabledIds = new Set(
-    (Array.isArray(tenantModulesQuery.data)
-      ? tenantModulesQuery.data
-      : []
-    ).map((m: { module_id?: string; id?: string }) => m.module_id || m.id)
+    (Array.isArray(tenantModulesQuery.data) ? tenantModulesQuery.data : []).map(
+      (m: { module_id?: string; id?: string }) => m.module_id || m.id,
+    ),
   );
+
+  const enabledFeatures = Array.isArray(tenantFeaturesQuery.data)
+    ? tenantFeaturesQuery.data.filter(
+        (f: { is_enabled?: boolean }) => f.is_enabled !== false,
+      )
+    : [];
 
   return (
     <div>
@@ -65,6 +85,34 @@ export default function ModulesPage() {
             : "View available modules. Contact an admin to enable modules."
         }
       />
+
+      <div className="mb-6 rounded-lg border bg-card p-4">
+        <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+          <Sparkles size={16} className="text-accent" /> Enabled features
+        </p>
+        {tenantFeaturesQuery.isLoading ? (
+          <div className="flex gap-2">
+            <Spinner size={14} />
+            <span className="text-sm text-muted-foreground">
+              Loading feature toggles...
+            </span>
+          </div>
+        ) : enabledFeatures.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No features enabled yet. Enable a module to auto-provision defaults.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {enabledFeatures.map(
+              (feature: { id: string; feature_key?: string }) => (
+                <Badge key={feature.id} variant="outline">
+                  {feature.feature_key || "feature"}
+                </Badge>
+              ),
+            )}
+          </div>
+        )}
+      </div>
 
       {allModulesQuery.data?.length === 0 ? (
         <EmptyState
@@ -110,6 +158,20 @@ export default function ModulesPage() {
                       <Check size={14} />
                     )}
                     Enable
+                  </Button>
+                )}
+                {enabled && (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="mt-4 w-full"
+                  >
+                    <Link
+                      to={`/app/modules/${encodeURIComponent(mod.name.toLowerCase())}`}
+                    >
+                      Open module <ArrowRight size={14} />
+                    </Link>
                   </Button>
                 )}
               </div>

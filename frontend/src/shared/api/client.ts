@@ -24,7 +24,7 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
         config.url?.includes("/modules") ||
         config.url?.includes("/audit");
       const token = isTenantScoped
-        ? state?.tenantToken ?? state?.accountToken
+        ? (state?.tenantToken ?? state?.accountToken)
         : state?.accountToken;
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -51,18 +51,20 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    const detail = error.response?.data?.detail || error.response?.data?.message;
+    const detail =
+      error.response?.data?.detail || error.response?.data?.message;
 
     if (status === 401) return "Invalid credentials. Please try again.";
     if (status === 403) return "You don't have permission for this action.";
-    if (status === 404) return "Resource not found.";
-    if (status === 409) return detail || "A conflict occurred. The resource may already exist.";
+    if (status === 404) return detail ? String(detail) : "Resource not found.";
+    if (status === 409)
+      return detail || "A conflict occurred. The resource may already exist.";
     if (status === 422) return detail || "Validation error. Check your input.";
     if (status === 429) return "Too many requests. Please wait and try again.";
     if (detail) return String(detail);

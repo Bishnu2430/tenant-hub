@@ -7,7 +7,7 @@ export const tenantsApi = {
   create: (data: {
     name: string;
     slug: string;
-    industry?: string;
+    industry: "school" | "hospital" | "hrms" | "ecommerce";
     country?: string;
     currency?: string;
     timezone?: string;
@@ -18,7 +18,9 @@ export const tenantsApi = {
     apiClient.get<Tenant>(`/tenants/${tenantId}`).then((r) => r.data),
 
   getMembers: (tenantId: string) =>
-    apiClient.get<TenantMember[]>(`/tenants/${tenantId}/members`).then((r) => r.data),
+    apiClient
+      .get<TenantMember[]>(`/tenants/${tenantId}/members`)
+      .then((r) => r.data),
 
   addMember: (
     tenantId: string,
@@ -27,7 +29,7 @@ export const tenantsApi = {
       user_email?: string;
       role_id?: string;
       role_name?: string;
-    }
+    },
   ) =>
     apiClient
       .post<TenantMember>(`/tenants/${tenantId}/members`, data)

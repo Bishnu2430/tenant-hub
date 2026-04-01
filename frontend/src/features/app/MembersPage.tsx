@@ -7,7 +7,14 @@ import { useAuthStore } from "@/shared/lib/auth-store";
 import { tenantsApi } from "@/features/tenants/api";
 import { rolesApi } from "@/features/roles/api";
 import { getErrorMessage } from "@/shared/api/client";
-import { PageHeader, PageSpinner, ErrorDisplay, EmptyState, Spinner, Badge } from "@/shared/ui";
+import {
+  PageHeader,
+  PageSpinner,
+  ErrorDisplay,
+  EmptyState,
+  Spinner,
+  Badge,
+} from "@/shared/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, ShieldCheck, UserPlus2 } from "lucide-react";
 
 const addMemberSchema = z.object({
   user_email: z.string().trim().email("Valid email required"),
@@ -70,6 +77,14 @@ export default function MembersPage() {
       />
     );
 
+  const members = membersQuery.data ?? [];
+  const admins = members.filter(
+    (m) => (m.role_name || "").toLowerCase() === "admin",
+  ).length;
+  const managers = members.filter(
+    (m) => (m.role_name || "").toLowerCase() === "manager",
+  ).length;
+
   return (
     <div>
       <PageHeader
@@ -89,7 +104,10 @@ export default function MembersPage() {
                 </DialogHeader>
                 <form
                   onSubmit={handleSubmit((d) =>
-                    addMutation.mutate({ user_email: d.user_email, role_name: d.role_name })
+                    addMutation.mutate({
+                      user_email: d.user_email,
+                      role_name: d.role_name,
+                    }),
                   )}
                   className="space-y-4"
                 >
@@ -111,6 +129,7 @@ export default function MembersPage() {
                     <select
                       id="role_name"
                       {...register("role_name")}
+                      disabled={rolesQuery.isLoading || rolesQuery.isError}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
                       <option value="">Select role…</option>
@@ -123,6 +142,16 @@ export default function MembersPage() {
                     {errors.role_name && (
                       <p className="text-xs text-destructive">
                         {errors.role_name.message}
+                      </p>
+                    )}
+                    {rolesQuery.isLoading && (
+                      <p className="text-xs text-muted-foreground">
+                        Loading roles...
+                      </p>
+                    )}
+                    {rolesQuery.isError && (
+                      <p className="text-xs text-destructive">
+                        Unable to load roles. Retry this page.
                       </p>
                     )}
                   </div>
@@ -139,9 +168,19 @@ export default function MembersPage() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={addMutation.isPending}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        addMutation.isPending ||
+                        rolesQuery.isLoading ||
+                        !!rolesQuery.isError
+                      }
+                    >
                       {addMutation.isPending && (
-                        <Spinner size={14} className="text-primary-foreground" />
+                        <Spinner
+                          size={14}
+                          className="text-primary-foreground"
+                        />
                       )}
                       Add
                     </Button>
@@ -153,7 +192,28 @@ export default function MembersPage() {
         }
       />
 
-      {membersQuery.data?.length === 0 ? (
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <Users size={14} /> Total members
+          </p>
+          <p className="text-2xl font-bold">{members.length}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck size={14} /> Admins
+          </p>
+          <p className="text-2xl font-bold">{admins}</p>
+        </div>
+        <div className="rounded-lg border bg-gradient-to-r from-cyan-500/10 to-sky-500/10 p-4">
+          <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <UserPlus2 size={14} /> Managers
+          </p>
+          <p className="text-2xl font-bold">{managers}</p>
+        </div>
+      </div>
+
+      {members.length === 0 ? (
         <EmptyState
           icon={<Users size={48} />}
           title="No members yet"
@@ -191,9 +251,7 @@ export default function MembersPage() {
                     <Badge>{member.role_name || "—"}</Badge>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <Badge variant="success">
-                      {member.status || "active"}
-                    </Badge>
+                    <Badge variant="success">{member.status || "active"}</Badge>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {member.joined_at

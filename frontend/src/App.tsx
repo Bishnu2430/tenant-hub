@@ -16,6 +16,7 @@ const DashboardPage = lazy(() => import("@/features/app/DashboardPage"));
 const MembersPage = lazy(() => import("@/features/app/MembersPage"));
 const RolesPage = lazy(() => import("@/features/app/RolesPage"));
 const ModulesPage = lazy(() => import("@/features/app/ModulesPage"));
+const ModuleDetailPage = lazy(() => import("@/features/app/ModuleDetailPage"));
 const AuditPage = lazy(() => import("@/features/app/AuditPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -82,11 +83,22 @@ const App = () => (
               <Route path="members" element={<MembersPage />} />
               <Route path="roles" element={<RolesPage />} />
               <Route path="modules" element={<ModulesPage />} />
+              <Route
+                path="modules/:moduleName"
+                element={<ModuleDetailPage />}
+              />
               <Route path="audit" element={<AuditPage />} />
             </Route>
 
             {/* Redirects & catch-all */}
-            <Route path="/" element={<GuestGuard><LoginPage /></GuestGuard>} />
+            <Route
+              path="/"
+              element={
+                <GuestGuard>
+                  <LoginPage />
+                </GuestGuard>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </SuspenseWrap>

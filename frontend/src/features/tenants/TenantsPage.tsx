@@ -18,8 +18,29 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PageSpinner, EmptyState, ErrorDisplay, Spinner, Badge } from "@/shared/ui";
-import { Plus, ArrowRight, Building2, LogOut } from "lucide-react";
+import {
+  PageSpinner,
+  EmptyState,
+  ErrorDisplay,
+  Spinner,
+  Badge,
+} from "@/shared/ui";
+import {
+  Plus,
+  ArrowRight,
+  Building2,
+  LogOut,
+  BarChart3,
+  Globe2,
+  Sparkles,
+} from "lucide-react";
+
+const INDUSTRY_OPTIONS = [
+  { value: "school", label: "School" },
+  { value: "hospital", label: "Hospital" },
+  { value: "hrms", label: "HRMS" },
+  { value: "ecommerce", label: "E-Commerce" },
+] as const;
 
 const createTenantSchema = z.object({
   name: z.string().trim().min(1, "Required").max(100),
@@ -29,7 +50,9 @@ const createTenantSchema = z.object({
     .min(1, "Required")
     .max(50)
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, dashes only"),
-  industry: z.string().trim().max(100).optional(),
+  industry: z.enum(["school", "hospital", "hrms", "ecommerce"], {
+    required_error: "Industry is required",
+  }),
   country: z.string().trim().max(100).optional(),
   currency: z.string().trim().max(10).optional(),
   timezone: z.string().trim().max(100).optional(),
@@ -63,7 +86,9 @@ export default function TenantsPage() {
     mutationFn: authApi.switchContext,
     onSuccess: (data, variables) => {
       setTenantAuth(data.access_token, data.tenant_id, data.role);
-      const tenant = tenantsQuery.data?.find((t) => t.id === variables.tenant_id);
+      const tenant = tenantsQuery.data?.find(
+        (t) => t.id === variables.tenant_id,
+      );
       if (tenant) setCurrentTenant(tenant);
       navigate("/app/dashboard");
     },
@@ -73,11 +98,27 @@ export default function TenantsPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
     reset,
   } = useForm<CreateTenantForm>({
     resolver: zodResolver(createTenantSchema),
+    defaultValues: {
+      industry: "school",
+      country: "India",
+      currency: "INR",
+      timezone: "Asia/Kolkata",
+      language: "en",
+    },
   });
+
+  const tenantCount = tenantsQuery.data?.length ?? 0;
+  const industryCount = new Set(
+    (tenantsQuery.data ?? []).map((t) => t.industry).filter(Boolean),
+  ).size;
+
+  const nameValue = watch("name");
 
   const handleSwitch = (tenantId: string) => {
     setSwitchingId(tenantId);
@@ -129,13 +170,45 @@ export default function TenantsPage() {
                 <DialogTitle>Create Organization</DialogTitle>
               </DialogHeader>
               <form
-                onSubmit={handleSubmit((d) => createMutation.mutate({ name: d.name!, slug: d.slug!, industry: d.industry, country: d.country, currency: d.currency, timezone: d.timezone, language: d.language }))}
+                onSubmit={handleSubmit((d) =>
+                  createMutation.mutate({
+                    name: d.name,
+                    slug: d.slug,
+                    industry: d.industry,
+                    country: d.country,
+                    currency: d.currency,
+                    timezone: d.timezone,
+                    language: d.language,
+                  }),
+                )}
                 className="space-y-4"
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="name">Name *</Label>
-                    <Input id="name" {...register("name")} />
+                    <Input
+                      id="name"
+                      {...register("name")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const autoSlug = value
+                          .toLowerCase()
+                          .trim()
+                          .replace(/[^a-z0-9\s-]/g, "")
+                          .replace(/\s+/g, "-")
+                          .replace(/-+/g, "-");
+                        setValue("name", value, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
+                        if (autoSlug) {
+                          setValue("slug", autoSlug, {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                        }
+                      }}
+                    />
                     {errors.name && (
                       <p className="text-xs text-destructive">
                         {errors.name.message}
@@ -154,10 +227,30 @@ export default function TenantsPage() {
                         {errors.slug.message}
                       </p>
                     )}
+                    {nameValue && (
+                      <p className="text-xs text-muted-foreground">
+                        Used in URLs and tenant switch context.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="industry">Industry</Label>
-                    <Input id="industry" {...register("industry")} />
+                    <Label htmlFor="industry">Industry *</Label>
+                    <select
+                      id="industry"
+                      {...register("industry")}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {INDUSTRY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.industry && (
+                      <p className="text-xs text-destructive">
+                        {errors.industry.message}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="country">Country</Label>
@@ -165,15 +258,27 @@ export default function TenantsPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="currency">Currency</Label>
-                    <Input id="currency" placeholder="USD" {...register("currency")} />
+                    <Input
+                      id="currency"
+                      placeholder="USD"
+                      {...register("currency")}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="timezone">Timezone</Label>
-                    <Input id="timezone" placeholder="UTC" {...register("timezone")} />
+                    <Input
+                      id="timezone"
+                      placeholder="UTC"
+                      {...register("timezone")}
+                    />
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label htmlFor="language">Language</Label>
-                    <Input id="language" placeholder="en" {...register("language")} />
+                    <Input
+                      id="language"
+                      placeholder="en"
+                      {...register("language")}
+                    />
                   </div>
                 </div>
 
@@ -192,13 +297,38 @@ export default function TenantsPage() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending && <Spinner size={14} className="text-primary-foreground" />}
+                    {createMutation.isPending && (
+                      <Spinner size={14} className="text-primary-foreground" />
+                    )}
                     Create
                   </Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
+        </div>
+
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border bg-card p-4">
+            <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <BarChart3 size={14} /> Organizations
+            </p>
+            <p className="text-2xl font-bold">{tenantCount}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-4">
+            <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <Globe2 size={14} /> Industries
+            </p>
+            <p className="text-2xl font-bold">{industryCount}</p>
+          </div>
+          <div className="rounded-lg border bg-gradient-to-r from-sky-500/10 to-emerald-500/10 p-4">
+            <p className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles size={14} /> Quick tip
+            </p>
+            <p className="text-sm">
+              Create with defaults, then customize roles/modules in-app.
+            </p>
+          </div>
         </div>
 
         {tenantsQuery.data?.length === 0 ? (
@@ -213,7 +343,10 @@ export default function TenantsPage() {
               <div
                 key={tenant.id}
                 className="group flex items-center justify-between rounded-lg border bg-card p-4 transition-shadow hover:shadow-md animate-fade-in"
-                style={{ animationDelay: `${i * 50}ms`, animationFillMode: "both" }}
+                style={{
+                  animationDelay: `${i * 50}ms`,
+                  animationFillMode: "both",
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-sm font-bold text-primary-foreground">
@@ -221,7 +354,9 @@ export default function TenantsPage() {
                   </div>
                   <div>
                     <p className="font-medium">{tenant.name}</p>
-                    <p className="text-xs text-muted-foreground">{tenant.slug}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tenant.slug}
+                    </p>
                   </div>
                   {tenant.industry && (
                     <Badge variant="outline">{tenant.industry}</Badge>
