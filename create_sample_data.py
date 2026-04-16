@@ -11,6 +11,7 @@ from app.db.session import SessionLocal
 from app.models.models import (
     AuditLog,
     FeatureToggle,
+    ERPRecord,
     Module,
     Permission,
     Role,
@@ -78,6 +79,16 @@ DEMO_TENANTS = [
         "language": "en",
         "plan": SubscriptionPlan.basic,
     },
+    {
+        "name": "NorthStar Finance Ops",
+        "slug": "northstar-finance",
+        "industry": TenantIndustry.finance,
+        "country": "India",
+        "currency": "INR",
+        "timezone": "Asia/Kolkata",
+        "language": "en",
+        "plan": SubscriptionPlan.enterprise,
+    },
 ]
 
 ROLE_NAMES = ["Admin", "Manager", "Member", "Viewer"]
@@ -87,6 +98,7 @@ FEATURES_BY_INDUSTRY = {
     TenantIndustry.hospital: ["appointments", "prescriptions", "patients"],
     TenantIndustry.hrms: ["employee_directory", "leave_management", "payroll"],
     TenantIndustry.ecommerce: ["catalog", "orders", "inventory"],
+    TenantIndustry.finance: ["invoice", "payment", "expense", "budget"],
 }
 
 
@@ -327,6 +339,45 @@ def ensure_audit_logs(db, tenant: Tenant, user: User) -> None:
         )
 
 
+def ensure_erp_record(
+    db,
+    tenant: Tenant,
+    module_name: str,
+    entity_name: str,
+    title: str,
+    *,
+    status: str = "open",
+    priority: str = "normal",
+    amount_cents: int | None = None,
+    payload_json: str | None = None,
+    linked_record: ERPRecord | None = None,
+) -> ERPRecord:
+    record = db.query(ERPRecord).filter(
+        ERPRecord.tenant_id == tenant.id,
+        ERPRecord.module_name == module_name,
+        ERPRecord.entity_name == entity_name,
+        ERPRecord.title == title,
+    ).first()
+    if not record:
+        record = ERPRecord(
+            id=str(uuid.uuid4()),
+            tenant_id=tenant.id,
+            module_name=module_name,
+            entity_name=entity_name,
+            title=title,
+        )
+        db.add(record)
+
+    record.status = status
+    record.priority = priority
+    record.amount_cents = amount_cents
+    record.payload_json = payload_json
+    record.linked_record_id = linked_record.id if linked_record else None
+    record.linked_record_title = linked_record.title if linked_record else None
+    record.owner_user_id = record.owner_user_id or None
+    return record
+
+
 def create_sample_data() -> None:
     db = SessionLocal()
     try:
@@ -361,6 +412,247 @@ def create_sample_data() -> None:
             ensure_subscription(db, tenant, plan)
             ensure_features(db, tenant)
             ensure_audit_logs(db, tenant, users[0])
+
+            if tenant.industry == TenantIndustry.school:
+                student = ensure_erp_record(
+                    db,
+                    tenant,
+                    "school",
+                    "student",
+                    "Aarav Kumar",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"roll_no":"S-101","class_name":"Grade 8 A","guardian":"Anita Kumar"}',
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "school",
+                    "attendance",
+                    "Attendance - 16 Apr 2026",
+                    status="open",
+                    priority="high",
+                    payload_json='{"date":"2026-04-16","attendance_status":"present","remarks":"Morning roll call"}',
+                    linked_record=student,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "school",
+                    "fee_invoice",
+                    "Tuition Invoice - Term 1",
+                    status="review",
+                    priority="normal",
+                    amount_cents=420000,
+                    payload_json='{"term":"2026-T1","due_date":"2026-04-30"}',
+                    linked_record=student,
+                )
+
+            if tenant.industry == TenantIndustry.hospital:
+                patient = ensure_erp_record(
+                    db,
+                    tenant,
+                    "hospital",
+                    "patient",
+                    "Maya Patel",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"gender":"female","age":32,"mrn":"P-2001"}',
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "hospital",
+                    "appointment",
+                    "OPD Appointment - 16 Apr 2026",
+                    status="open",
+                    priority="high",
+                    payload_json='{"department":"General Medicine","slot":"10:30 AM","doctor":"Dr. Iyer"}',
+                    linked_record=patient,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "hospital",
+                    "billing_invoice",
+                    "Billing Invoice - Outpatient Visit",
+                    status="review",
+                    priority="normal",
+                    amount_cents=185000,
+                    payload_json='{"visit_type":"OPD","insurance":"None"}',
+                    linked_record=patient,
+                )
+
+            if tenant.industry == TenantIndustry.hrms:
+                employee = ensure_erp_record(
+                    db,
+                    tenant,
+                    "hrms",
+                    "employee",
+                    "Riya Sharma",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"employee_code":"E-401","department":"Operations","designation":"Coordinator"}',
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "hrms",
+                    "leave_request",
+                    "Leave Request - Riya Sharma",
+                    status="review",
+                    priority="high",
+                    payload_json='{"leave_type":"earned_leave","from":"2026-04-20","to":"2026-04-22"}',
+                    linked_record=employee,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "hrms",
+                    "payroll_run",
+                    "Payroll Run - April 2026",
+                    status="open",
+                    priority="critical",
+                    amount_cents=12850000,
+                    payload_json='{"pay_period":"2026-04","net_payroll":true}',
+                    linked_record=employee,
+                )
+
+            if tenant.industry == TenantIndustry.ecommerce:
+                customer = ensure_erp_record(
+                    db,
+                    tenant,
+                    "ecommerce",
+                    "customer",
+                    "Metro Retail",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"customer_code":"C-9001","segment":"B2B"}',
+                )
+                product = ensure_erp_record(
+                    db,
+                    tenant,
+                    "ecommerce",
+                    "product",
+                    "Executive Notebook",
+                    status="open",
+                    priority="normal",
+                    amount_cents=6500,
+                    payload_json='{"sku":"NB-01","stock_on_hand":240}',
+                )
+                order = ensure_erp_record(
+                    db,
+                    tenant,
+                    "ecommerce",
+                    "sales_order",
+                    "SO-2026-0416",
+                    status="open",
+                    priority="high",
+                    amount_cents=96000,
+                    payload_json='{"order_total":"960.00","channel":"web"}',
+                    linked_record=customer,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "ecommerce",
+                    "shipment",
+                    "Shipment for SO-2026-0416",
+                    status="in_progress",
+                    priority="normal",
+                    payload_json='{"carrier":"BlueDart","tracking":"TRK-8831"}',
+                    linked_record=order,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "ecommerce",
+                    "inventory_move",
+                    "Stock Adjustment - Executive Notebook",
+                    status="completed",
+                    priority="normal",
+                    payload_json='{"movement":"outbound","delta":-8}',
+                    linked_record=product,
+                )
+
+            if tenant.industry == TenantIndustry.finance:
+                customer = ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "customer",
+                    "Northwind Services",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"customer_code":"F-1001","category":"enterprise"}',
+                )
+                vendor = ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "vendor",
+                    "Papertrail Office Supplies",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"vendor_code":"V-7001","category":"operations"}',
+                )
+                account = ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "account",
+                    "Operating Bank Account",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"currency":"INR","account_type":"bank"}',
+                )
+                invoice = ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "invoice",
+                    "Invoice FIN-2401",
+                    status="open",
+                    priority="high",
+                    amount_cents=215000,
+                    payload_json='{"due_date":"2026-04-28","memo":"Professional services"}',
+                    linked_record=customer,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "payment",
+                    "Payment FIN-2401",
+                    status="completed",
+                    priority="normal",
+                    amount_cents=50000,
+                    payload_json='{"method":"bank_transfer","reference":"UTR-8892"}',
+                    linked_record=invoice,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "expense",
+                    "Office Supplies Expense",
+                    status="review",
+                    priority="normal",
+                    amount_cents=18400,
+                    payload_json='{"category":"stationery","approved":false}',
+                    linked_record=vendor,
+                )
+                ensure_erp_record(
+                    db,
+                    tenant,
+                    "finance",
+                    "ledger_entry",
+                    "Ledger Entry - April Close",
+                    status="open",
+                    priority="normal",
+                    payload_json='{"account":"Operating Bank Account","entry_type":"debit"}',
+                    linked_record=account,
+                )
 
         db.commit()
 

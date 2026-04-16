@@ -184,6 +184,83 @@ class FeatureToggleOut(BaseModel):
         from_attributes = True
 
 
+# ─── ERP ──────────────────────────────────────────────────────────────────────
+
+class ERPRecordCreate(BaseModel):
+    entity_name: str
+    title: str
+    status: Optional[str] = "draft"
+    priority: Optional[str] = "normal"
+    amount_cents: Optional[int] = None
+    due_at: Optional[datetime] = None
+    payload: Optional[dict] = None
+    assigned_to_user_id: Optional[str] = None
+    linked_record_id: Optional[str] = None
+
+
+class ERPRecordUpdate(BaseModel):
+    title: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    amount_cents: Optional[int] = None
+    due_at: Optional[datetime] = None
+    payload: Optional[dict] = None
+    assigned_to_user_id: Optional[str] = None
+    blocked_reason: Optional[str] = None
+    linked_record_id: Optional[str] = None
+
+
+class ERPRecordTransitionRequest(BaseModel):
+    to_status: str
+    note: Optional[str] = None
+
+
+class ERPRecordOut(BaseModel):
+    id: str
+    tenant_id: str
+    module_name: str
+    entity_name: str
+    title: str
+    status: str
+    priority: str
+    assigned_to_user_id: Optional[str]
+    linked_record_id: Optional[str]
+    linked_record_title: Optional[str]
+    amount_cents: Optional[int]
+    owner_user_id: Optional[str]
+    due_at: Optional[datetime]
+    blocked_at: Optional[datetime]
+    blocked_reason: Optional[str]
+    payload_json: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ERPModuleSummary(BaseModel):
+    module_name: str
+    total_records: int
+    open_records: int
+    done_records: int
+    blocked_records: int
+    overdue_records: int
+    total_amount_cents: int
+    entities: List[str]
+
+
+class ERPDashboardSummary(BaseModel):
+    tenant_id: str
+    total_records: int
+    open_records: int
+    done_records: int
+    blocked_records: int
+    overdue_records: int
+    total_amount_cents: int
+    modules: List[ERPModuleSummary]
+
+
 # ─── Audit Log ────────────────────────────────────────────────────────────────
 
 class AuditLogOut(BaseModel):

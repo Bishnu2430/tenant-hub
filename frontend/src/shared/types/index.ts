@@ -54,6 +54,49 @@ export interface Module {
   is_active?: boolean;
 }
 
+export interface ERPRecord {
+  id: string;
+  tenant_id: string;
+  module_name: string;
+  entity_name: string;
+  title: string;
+  status: string;
+  priority: string;
+  assigned_to_user_id?: string | null;
+  linked_record_id?: string | null;
+  linked_record_title?: string | null;
+  amount_cents?: number | null;
+  owner_user_id?: string | null;
+  due_at?: string | null;
+  blocked_at?: string | null;
+  blocked_reason?: string | null;
+  payload_json?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ERPModuleSummary {
+  module_name: string;
+  total_records: number;
+  open_records: number;
+  done_records: number;
+  blocked_records: number;
+  overdue_records: number;
+  total_amount_cents: number;
+  entities: string[];
+}
+
+export interface ERPDashboardSummary {
+  tenant_id: string;
+  total_records: number;
+  open_records: number;
+  done_records: number;
+  blocked_records: number;
+  overdue_records: number;
+  total_amount_cents: number;
+  modules: ERPModuleSummary[];
+}
+
 export interface TenantModule {
   id: string;
   tenant_id: string;

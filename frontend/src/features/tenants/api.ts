@@ -7,7 +7,7 @@ export const tenantsApi = {
   create: (data: {
     name: string;
     slug: string;
-    industry: "school" | "hospital" | "hrms" | "ecommerce";
+    industry: "school" | "hospital" | "hrms" | "ecommerce" | "finance";
     country?: string;
     currency?: string;
     timezone?: string;

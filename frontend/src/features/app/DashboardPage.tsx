@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "@/shared/lib/auth-store";
 import { tenantsApi } from "@/features/tenants/api";
 import { auditApi } from "@/features/audit/api";
+import { modulesApi } from "@/features/modules/api";
 import { PageHeader, Skeleton, ErrorDisplay, Badge } from "@/shared/ui";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/shared/api/client";
@@ -41,6 +42,21 @@ export default function DashboardPage() {
     queryFn: () => auditApi.list({ tenant_id: tenantId, limit: 5 }),
   });
 
+  const erpSummaryQuery = useQuery({
+    queryKey: ["erp-dashboard", tenantId],
+    queryFn: () => modulesApi.getDashboardSummary(tenantId),
+  });
+
+  const formatAmount = (amountCents: number, useCurrency: boolean) => {
+    const amount = (amountCents / 100).toLocaleString();
+    return useCurrency ? `₹${amount}` : amount;
+  };
+
+  const hasFinanceModule =
+    erpSummaryQuery.data?.modules?.some(
+      (module) => module.module_name === "finance",
+    ) || false;
+
   const stats = [
     {
       label: "Members",
@@ -55,22 +71,45 @@ export default function DashboardPage() {
       loading: modulesQuery.isLoading,
     },
     {
-      label: "Recent Events",
-      value: auditQuery.data?.length ?? "—",
+      label: "ERP Records",
+      value: erpSummaryQuery.data?.total_records ?? "—",
       icon: Activity,
-      loading: auditQuery.isLoading,
+      loading: erpSummaryQuery.isLoading,
     },
     {
-      label: "Enabled Features",
-      value: Array.isArray(featuresQuery.data)
-        ? featuresQuery.data.filter(
-            (f: { is_enabled?: boolean }) => f.is_enabled !== false,
-          ).length
-        : "—",
+      label: "Open ERP Tasks",
+      value: erpSummaryQuery.data?.open_records ?? "—",
       icon: Zap,
-      loading: featuresQuery.isLoading,
+      loading: erpSummaryQuery.isLoading,
+    },
+    {
+      label: "Blocked ERP Tasks",
+      value: erpSummaryQuery.data?.blocked_records ?? "—",
+      icon: Clock,
+      loading: erpSummaryQuery.isLoading,
+    },
+    {
+      label: "Overdue ERP Tasks",
+      value: erpSummaryQuery.data?.overdue_records ?? "—",
+      icon: Clock,
+      loading: erpSummaryQuery.isLoading,
+    },
+    {
+      label: hasFinanceModule ? "Processed Value" : "Tracked Value",
+      value: formatAmount(
+        erpSummaryQuery.data?.total_amount_cents || 0,
+        hasFinanceModule,
+      ),
+      icon: Boxes,
+      loading: erpSummaryQuery.isLoading,
     },
   ];
+
+  const enabledFeatures = Array.isArray(featuresQuery.data)
+    ? featuresQuery.data.filter(
+        (f: { is_enabled?: boolean }) => f.is_enabled !== false,
+      ).length
+    : 0;
 
   const roleCounts = (membersQuery.data ?? []).reduce<Record<string, number>>(
     (acc, member) => {
@@ -226,6 +265,55 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mb-8 rounded-lg border bg-card p-5">
+        <h3 className="mb-4 text-sm font-semibold">ERP Module Performance</h3>
+        {erpSummaryQuery.isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        ) : erpSummaryQuery.isError ? (
+          <ErrorDisplay
+            message={getErrorMessage(erpSummaryQuery.error)}
+            onRetry={() => erpSummaryQuery.refetch()}
+          />
+        ) : !erpSummaryQuery.data?.modules?.length ? (
+          <p className="text-sm text-muted-foreground">
+            No ERP records yet. Open a module and start creating operational
+            entries.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {erpSummaryQuery.data.modules.map((mod) => (
+              <div
+                key={mod.module_name}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 p-3 text-sm"
+              >
+                <div className="font-medium capitalize">{mod.module_name}</div>
+                <div className="text-muted-foreground">
+                  {mod.total_records} records • {mod.open_records} open •{" "}
+                  {formatAmount(
+                    mod.total_amount_cents,
+                    mod.module_name === "finance",
+                  )}{" "}
+                  • {mod.blocked_records} blocked • {mod.overdue_records}{" "}
+                  overdue
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 rounded-lg border bg-card p-5">
+        <h3 className="mb-2 text-sm font-semibold">Feature Coverage</h3>
+        <p className="text-sm text-muted-foreground">
+          {enabledFeatures} features are enabled in this tenant, backing ERP
+          workflows across active modules.
+        </p>
       </div>
 
       <div>

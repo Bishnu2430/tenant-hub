@@ -26,6 +26,7 @@ class TenantIndustry(str, enum.Enum):
     hospital = "hospital"
     hrms = "hrms"
     ecommerce = "ecommerce"
+    finance = "finance"
 
 
 # ─── User ─────────────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ class Tenant(Base):
     modules = relationship("TenantModule", back_populates="tenant")
     subscriptions = relationship("Subscription", back_populates="tenant")
     feature_toggles = relationship("FeatureToggle", back_populates="tenant")
+    erp_records = relationship("ERPRecord", back_populates="tenant")
 
 
 # ─── Role ─────────────────────────────────────────────────────────────────────
@@ -187,6 +189,52 @@ class FeatureToggle(Base):
     is_enabled = Column(Boolean, default=True)
 
     tenant = relationship("Tenant", back_populates="feature_toggles")
+
+
+# ─── ERP Record Store ────────────────────────────────────────────────────────
+
+class ERPRecord(Base):
+    __tablename__ = "erp_records"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    module_name = Column(String, nullable=False, index=True)
+    entity_name = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="draft")
+    priority = Column(String, nullable=False, default="normal")
+    assigned_to_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    linked_record_id = Column(String, ForeignKey("erp_records.id"), nullable=True)
+    linked_record_title = Column(String, nullable=True)
+    amount_cents = Column(Integer, nullable=True)
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    due_at = Column(DateTime, nullable=True)
+    blocked_at = Column(DateTime, nullable=True)
+    blocked_reason = Column(String, nullable=True)
+    payload_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    tenant = relationship("Tenant", back_populates="erp_records")
+    history = relationship("ERPRecordHistory", back_populates="record")
+    linked_record = relationship("ERPRecord", remote_side=[id], uselist=False)
+
+
+class ERPRecordHistory(Base):
+    __tablename__ = "erp_record_history"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    record_id = Column(String, ForeignKey("erp_records.id"), nullable=False, index=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    module_name = Column(String, nullable=False, index=True)
+    entity_name = Column(String, nullable=False, index=True)
+    from_status = Column(String, nullable=True)
+    to_status = Column(String, nullable=False)
+    note = Column(Text, nullable=True)
+    action_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    record = relationship("ERPRecord", back_populates="history")
 
 
 # ─── AuditLog ─────────────────────────────────────────────────────────────────

@@ -17,6 +17,10 @@ DEFAULT_MODULES: list[dict[str, str]] = [
         "name": "ecommerce",
         "description": "E-Commerce – products, orders, inventory",
     },
+    {
+        "name": "finance",
+        "description": "Finance – invoices, payments, expenses, budgets",
+    },
 ]
 
 
@@ -54,6 +58,9 @@ DEFAULT_PERMISSIONS: list[tuple[str, str]] = [
     ("order:write", "Write orders"),
     ("inventory:read", "Read inventory"),
     ("inventory:write", "Write inventory"),
+    # Finance
+    ("finance:read", "Read finance operations"),
+    ("finance:write", "Write finance operations"),
     # Admin
     ("tenant:manage", "Manage tenant members and settings"),
     ("module:manage", "Manage tenant modules and subscriptions"),

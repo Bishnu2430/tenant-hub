@@ -20,6 +20,7 @@ MODULE_FEATURES: dict[str, list[str]] = {
     "hospital": ["appointment", "prescription", "patient"],
     "hrms": ["employee", "leave", "payroll"],
     "ecommerce": ["product", "order", "inventory"],
+    "finance": ["invoice", "payment", "expense", "budget"],
 }
 
 

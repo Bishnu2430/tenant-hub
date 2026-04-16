@@ -40,6 +40,7 @@ const INDUSTRY_OPTIONS = [
   { value: "hospital", label: "Hospital" },
   { value: "hrms", label: "HRMS" },
   { value: "ecommerce", label: "E-Commerce" },
+  { value: "finance", label: "Finance" },
 ] as const;
 
 const createTenantSchema = z.object({
@@ -50,7 +51,7 @@ const createTenantSchema = z.object({
     .min(1, "Required")
     .max(50)
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, dashes only"),
-  industry: z.enum(["school", "hospital", "hrms", "ecommerce"], {
+  industry: z.enum(["school", "hospital", "hrms", "ecommerce", "finance"], {
     required_error: "Industry is required",
   }),
   country: z.string().trim().max(100).optional(),

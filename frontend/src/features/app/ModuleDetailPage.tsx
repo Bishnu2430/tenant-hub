@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/shared/lib/auth-store";
 import { tenantsApi } from "@/features/tenants/api";
+import { modulesApi } from "@/features/modules/api";
 import { getErrorMessage } from "@/shared/api/client";
 import {
   PageHeader,
@@ -12,142 +13,290 @@ import {
   Badge,
 } from "@/shared/ui";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Building2,
   Activity,
   ClipboardList,
-  HeartPulse,
-  School,
-  Briefcase,
-  ShoppingCart,
+  Plus,
+  Check,
+  ListTodo,
 } from "lucide-react";
 
-type ModuleConfig = {
-  title: string;
-  subtitle: string;
-  icon: typeof Activity;
-  highlightGradient: string;
-  quickFacts: Array<{ label: string; value: string }>;
-  workflows: string[];
-  alerts: string[];
-};
-
-const MODULE_CONTENT: Record<string, ModuleConfig> = {
-  hospital: {
-    title: "Hospital Command Center",
+const MODULE_BLUEPRINT: Record<
+  string,
+  { title: string; subtitle: string; entities: string[]; workflows: string[] }
+> = {
+  school: {
+    title: "School ERP Workspace",
     subtitle:
-      "Track appointments, patient records, and treatment queues from one view.",
-    icon: HeartPulse,
-    highlightGradient: "from-rose-500/15 to-orange-500/10",
-    quickFacts: [
-      { label: "Patient throughput", value: "132/day" },
-      { label: "Avg wait time", value: "18 min" },
-      { label: "Bed occupancy", value: "81%" },
+      "Manage students, attendance, exams, class schedules, and fee invoices.",
+    entities: [
+      "student",
+      "attendance",
+      "exam",
+      "class",
+      "teacher",
+      "timetable",
+      "fee_invoice",
+      "announcement",
     ],
     workflows: [
-      "Admissions triage and token queue",
-      "Doctor rounds and prescription dispatch",
-      "Lab report turnaround tracking",
-    ],
-    alerts: [
-      "2 ICU beds nearing capacity",
-      "5 prescriptions pending review",
-      "Radiology SLA breach risk in 1 hour",
+      "Daily attendance capture",
+      "Exam publishing",
+      "Fee invoice tracking",
     ],
   },
-  school: {
-    title: "School Operations Hub",
-    subtitle: "Monitor attendance, exam readiness, and timetable compliance.",
-    icon: School,
-    highlightGradient: "from-blue-500/15 to-indigo-500/10",
-    quickFacts: [
-      { label: "Attendance today", value: "94%" },
-      { label: "Upcoming exams", value: "7" },
-      { label: "Open notices", value: "11" },
+  hospital: {
+    title: "Hospital ERP Workspace",
+    subtitle:
+      "Track patients, appointments, prescriptions, lab orders, and billing.",
+    entities: [
+      "patient",
+      "doctor",
+      "department",
+      "appointment",
+      "prescription",
+      "lab_order",
+      "billing_invoice",
     ],
     workflows: [
-      "Morning attendance capture",
-      "Exam hall allocation and invigilation",
-      "Weekly timetable exception handling",
-    ],
-    alerts: [
-      "2 classes below 85% attendance",
-      "Science lab booking conflict at 11:30",
-      "Midterm marks upload due tomorrow",
+      "OPD intake",
+      "Clinical prescription cycle",
+      "Lab and billing reconciliation",
     ],
   },
   hrms: {
-    title: "HRMS Workforce Console",
-    subtitle:
-      "Stay on top of leave balances, payroll status, and workforce pulse.",
-    icon: Briefcase,
-    highlightGradient: "from-emerald-500/15 to-cyan-500/10",
-    quickFacts: [
-      { label: "Active employees", value: "412" },
-      { label: "Pending leave requests", value: "23" },
-      { label: "Payroll completion", value: "88%" },
+    title: "HRMS ERP Workspace",
+    subtitle: "Run employee operations including leaves, payroll, and reviews.",
+    entities: [
+      "employee",
+      "department",
+      "team",
+      "leave_request",
+      "payroll_run",
+      "timesheet",
+      "performance_review",
     ],
-    workflows: [
-      "Leave approval and policy checks",
-      "Payroll lock and bank export",
-      "Quarterly performance calibration",
-    ],
-    alerts: [
-      "12 profiles missing KYC documents",
-      "Payroll cycle closes in 2 days",
-      "3 probation reviews overdue",
-    ],
+    workflows: ["Hiring and onboarding", "Leave approval", "Payroll closure"],
   },
   ecommerce: {
-    title: "E-Commerce Growth Desk",
-    subtitle: "Watch orders, inventory velocity, and fulfillment performance.",
-    icon: ShoppingCart,
-    highlightGradient: "from-amber-500/15 to-lime-500/10",
-    quickFacts: [
-      { label: "Orders today", value: "286" },
-      { label: "Cart conversion", value: "3.9%" },
-      { label: "Low stock SKUs", value: "17" },
+    title: "Commerce ERP Workspace",
+    subtitle: "Run catalog, orders, shipments, returns, and stock movements.",
+    entities: [
+      "customer",
+      "product",
+      "warehouse",
+      "sales_order",
+      "shipment",
+      "return_request",
+      "inventory_move",
+    ],
+    workflows: ["Order to ship", "Returns loop", "Inventory replenishment"],
+  },
+  finance: {
+    title: "Finance ERP Workspace",
+    subtitle:
+      "Control invoices, payments, expenses, budget controls, and ledger entries.",
+    entities: [
+      "customer",
+      "vendor",
+      "account",
+      "invoice",
+      "payment",
+      "expense",
+      "budget",
+      "ledger_entry",
     ],
     workflows: [
-      "Order capture to shipment handoff",
-      "Inventory replenishment planning",
-      "Returns and refund reconciliation",
-    ],
-    alerts: [
-      "Flash sale starts in 4 hours",
-      "4 high-demand SKUs under threshold",
-      "Courier SLA dipped below 95%",
+      "Accounts receivable",
+      "Expense approvals",
+      "Budget variance monitoring",
     ],
   },
 };
 
-const FALLBACK_CONFIG: ModuleConfig = {
-  title: "Module Overview",
-  subtitle:
-    "Module-specific summaries, workflows, and alerts will appear here.",
-  icon: Building2,
-  highlightGradient: "from-cyan-500/15 to-sky-500/10",
-  quickFacts: [
-    { label: "Configured widgets", value: "6" },
-    { label: "Active integrations", value: "4" },
-    { label: "Pending actions", value: "9" },
-  ],
-  workflows: [
-    "Review module health metrics",
-    "Coordinate daily operational tasks",
-    "Resolve pending alerts",
-  ],
-  alerts: [
-    "No module-specific alert map found",
-    "Using default operational template",
-    "Add module profile to customize this view",
-  ],
+const MODULE_LINKED_RECORD_TARGETS: Record<
+  string,
+  Record<
+    string,
+    {
+      label: string;
+      entities: string[];
+      helper: string;
+    }
+  >
+> = {
+  school: {
+    attendance: {
+      label: "Student",
+      entities: ["student"],
+      helper: "Attendance is tied to a student record.",
+    },
+    fee_invoice: {
+      label: "Student",
+      entities: ["student"],
+      helper: "Fee invoices should reference the enrolled student.",
+    },
+    exam: {
+      label: "Class",
+      entities: ["class"],
+      helper: "Exams are anchored to the class being assessed.",
+    },
+    timetable: {
+      label: "Class or Teacher",
+      entities: ["class", "teacher"],
+      helper: "Choose the class or teacher responsible for this timetable.",
+    },
+  },
+  hospital: {
+    appointment: {
+      label: "Patient",
+      entities: ["patient"],
+      helper: "Appointments should always belong to a patient.",
+    },
+    prescription: {
+      label: "Patient",
+      entities: ["patient"],
+      helper: "Prescriptions are linked to the patient chart.",
+    },
+    lab_order: {
+      label: "Patient",
+      entities: ["patient"],
+      helper: "Lab orders should reference the patient record.",
+    },
+    billing_invoice: {
+      label: "Patient",
+      entities: ["patient"],
+      helper: "Billing should be tied back to the patient visit.",
+    },
+  },
+  hrms: {
+    leave_request: {
+      label: "Employee",
+      entities: ["employee"],
+      helper: "Leave requests need an employee owner.",
+    },
+    payroll_run: {
+      label: "Employee",
+      entities: ["employee"],
+      helper: "Payroll runs should be anchored to an employee batch.",
+    },
+    timesheet: {
+      label: "Employee",
+      entities: ["employee"],
+      helper: "Timesheets belong to the employee who submitted them.",
+    },
+    performance_review: {
+      label: "Employee",
+      entities: ["employee"],
+      helper: "Reviews should reference the employee being assessed.",
+    },
+  },
+  ecommerce: {
+    sales_order: {
+      label: "Customer",
+      entities: ["customer"],
+      helper: "Sales orders should reference the customer placing the order.",
+    },
+    shipment: {
+      label: "Sales Order",
+      entities: ["sales_order"],
+      helper: "Shipments are linked to the originating sales order.",
+    },
+    return_request: {
+      label: "Sales Order",
+      entities: ["sales_order"],
+      helper: "Returns should trace back to the original order.",
+    },
+    inventory_move: {
+      label: "Product",
+      entities: ["product"],
+      helper: "Inventory movements are tied to the stock item.",
+    },
+  },
+  finance: {
+    invoice: {
+      label: "Customer or vendor",
+      entities: ["customer", "vendor"],
+      helper: "Pick the customer or vendor this invoice belongs to.",
+    },
+    payment: {
+      label: "Invoice",
+      entities: ["invoice"],
+      helper: "Payments should settle a specific invoice.",
+    },
+    expense: {
+      label: "Vendor",
+      entities: ["vendor"],
+      helper: "Expenses should reference the paying vendor or supplier.",
+    },
+    ledger_entry: {
+      label: "Account",
+      entities: ["account"],
+      helper: "Ledger entries should point to the affected account.",
+    },
+  },
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  student: "Student",
+  attendance: "Attendance",
+  exam: "Exam",
+  class: "Class",
+  teacher: "Teacher",
+  timetable: "Timetable",
+  fee_invoice: "Fee Invoice",
+  announcement: "Announcement",
+  patient: "Patient",
+  doctor: "Doctor",
+  department: "Department",
+  appointment: "Appointment",
+  prescription: "Prescription",
+  lab_order: "Lab Order",
+  billing_invoice: "Billing Invoice",
+  employee: "Employee",
+  team: "Team",
+  leave_request: "Leave Request",
+  payroll_run: "Payroll Run",
+  timesheet: "Timesheet",
+  performance_review: "Performance Review",
+  customer: "Customer",
+  product: "Product",
+  warehouse: "Warehouse",
+  sales_order: "Sales Order",
+  shipment: "Shipment",
+  return_request: "Return Request",
+  inventory_move: "Inventory Move",
+  vendor: "Vendor",
+  account: "Account",
+  invoice: "Invoice",
+  payment: "Payment",
+  expense: "Expense",
+  budget: "Budget",
+  ledger_entry: "Ledger Entry",
 };
 
 export default function ModuleDetailPage() {
   const { moduleName } = useParams<{ moduleName: string }>();
   const tenantId = useAuthStore((s) => s.selectedTenantId)!;
+  const roleName = useAuthStore((s) => s.roleName);
+  const canWrite =
+    roleName === "Admin" || roleName === "Manager" || roleName === "admin";
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newEntity, setNewEntity] = useState("");
+  const [newStatus, setNewStatus] = useState("open");
+  const [newPriority, setNewPriority] = useState("normal");
+  const [newAmount, setNewAmount] = useState("");
+  const [newDueAt, setNewDueAt] = useState("");
+  const [linkedEntityName, setLinkedEntityName] = useState("");
+  const [linkedRecordId, setLinkedRecordId] = useState("");
+  const [blockReason, setBlockReason] = useState("");
 
   const modulesQuery = useQuery({
     queryKey: ["tenant-modules", tenantId],
@@ -157,6 +306,11 @@ export default function ModuleDetailPage() {
   const featuresQuery = useQuery({
     queryKey: ["tenant-features", tenantId],
     queryFn: () => tenantsApi.getFeatures(tenantId),
+  });
+
+  const erpSummaryQuery = useQuery({
+    queryKey: ["erp-dashboard", tenantId],
+    queryFn: () => modulesApi.getDashboardSummary(tenantId),
   });
 
   const normalizedModuleName = decodeURIComponent(moduleName || "")
@@ -171,8 +325,135 @@ export default function ModuleDetailPage() {
     );
   }, [modulesQuery.data, normalizedModuleName]);
 
-  const config = MODULE_CONTENT[normalizedModuleName] || FALLBACK_CONFIG;
-  const Icon = config.icon;
+  const moduleConfig = MODULE_BLUEPRINT[normalizedModuleName];
+  const defaultEntityName = moduleConfig?.entities?.[0] || "generic";
+
+  useEffect(() => {
+    if (!moduleConfig) return;
+    setNewEntity((current) =>
+      moduleConfig.entities.includes(current) ? current : defaultEntityName,
+    );
+  }, [defaultEntityName, moduleConfig]);
+
+  const activeEntityName = newEntity || defaultEntityName;
+
+  const linkedTargetConfig = useMemo(() => {
+    return (
+      MODULE_LINKED_RECORD_TARGETS[normalizedModuleName]?.[activeEntityName] ||
+      null
+    );
+  }, [activeEntityName, normalizedModuleName]);
+
+  useEffect(() => {
+    if (!linkedTargetConfig) {
+      setLinkedEntityName("");
+      setLinkedRecordId("");
+      return;
+    }
+
+    setLinkedEntityName((current) =>
+      linkedTargetConfig.entities.includes(current)
+        ? current
+        : linkedTargetConfig.entities[0],
+    );
+    setLinkedRecordId("");
+  }, [linkedTargetConfig]);
+
+  const linkedRecordsQuery = useQuery({
+    queryKey: [
+      "erp-linked-records",
+      tenantId,
+      normalizedModuleName,
+      linkedEntityName,
+    ],
+    enabled: !!selectedModule && !!linkedEntityName,
+    queryFn: () =>
+      modulesApi.listRecords(
+        tenantId,
+        normalizedModuleName,
+        linkedEntityName,
+        100,
+      ),
+  });
+
+  const recordsQuery = useQuery({
+    queryKey: ["erp-records", tenantId, normalizedModuleName],
+    enabled: !!selectedModule,
+    queryFn: () =>
+      modulesApi.listRecords(tenantId, normalizedModuleName, undefined, 100),
+  });
+
+  const createRecordMutation = useMutation({
+    mutationFn: () =>
+      modulesApi.createRecord(tenantId, normalizedModuleName, {
+        entity_name: activeEntityName,
+        title: newTitle.trim(),
+        status: newStatus,
+        priority: newPriority,
+        amount_cents: newAmount ? Number(newAmount) * 100 : undefined,
+        due_at: newDueAt ? new Date(newDueAt).toISOString() : undefined,
+        linked_record_id: linkedTargetConfig ? linkedRecordId || null : null,
+      }),
+    onSuccess: () => {
+      setNewTitle("");
+      setNewEntity(defaultEntityName);
+      setNewStatus("open");
+      setNewPriority("normal");
+      setNewAmount("");
+      setNewDueAt("");
+      setLinkedRecordId("");
+      queryClient.invalidateQueries({
+        queryKey: ["erp-records", tenantId, normalizedModuleName],
+      });
+      queryClient.invalidateQueries({ queryKey: ["erp-dashboard", tenantId] });
+      toast({
+        title: "Record created",
+        description: "ERP record added to module workflow.",
+      });
+    },
+  });
+
+  const transitionRecordMutation = useMutation({
+    mutationFn: ({
+      recordId,
+      toStatus,
+    }: {
+      recordId: string;
+      toStatus: string;
+    }) =>
+      modulesApi.transitionRecord(tenantId, recordId, {
+        to_status: toStatus,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["erp-records", tenantId, normalizedModuleName],
+      });
+      queryClient.invalidateQueries({ queryKey: ["erp-dashboard", tenantId] });
+    },
+  });
+
+  const blockRecordMutation = useMutation({
+    mutationFn: (recordId: string) =>
+      modulesApi.transitionRecord(tenantId, recordId, {
+        to_status: "blocked",
+        note: blockReason || "Blocked for review",
+      }),
+    onSuccess: () => {
+      setBlockReason("");
+      queryClient.invalidateQueries({
+        queryKey: ["erp-records", tenantId, normalizedModuleName],
+      });
+      queryClient.invalidateQueries({ queryKey: ["erp-dashboard", tenantId] });
+    },
+  });
+
+  const nextStatusMap: Record<string, string[]> = {
+    draft: ["open", "blocked"],
+    open: ["in_progress", "blocked", "completed"],
+    in_progress: ["review", "blocked", "completed"],
+    review: ["completed", "blocked"],
+    blocked: ["open", "in_progress"],
+  };
 
   const moduleFeatures = useMemo(() => {
     const features = Array.isArray(featuresQuery.data)
@@ -183,6 +464,7 @@ export default function ModuleDetailPage() {
       school: ["attendance", "results", "timetable", "announcement"],
       hrms: ["employee", "leave", "payroll"],
       ecommerce: ["product", "order", "inventory"],
+      finance: ["invoice", "payment", "expense", "budget"],
     };
     const prefixes = keyPrefixes[normalizedModuleName] || [];
     return features
@@ -193,6 +475,23 @@ export default function ModuleDetailPage() {
       })
       .slice(0, 10);
   }, [featuresQuery.data, normalizedModuleName]);
+
+  const moduleSummary = erpSummaryQuery.data?.modules?.find(
+    (m) => m.module_name === normalizedModuleName,
+  );
+  const formatAmount = (amountCents: number) => {
+    const amount = (amountCents / 100).toLocaleString();
+    return normalizedModuleName === "finance" ? `₹${amount}` : amount;
+  };
+  const entityOptions = moduleConfig?.entities || ["generic"];
+  const linkedRecordOptions = Array.isArray(linkedRecordsQuery.data)
+    ? linkedRecordsQuery.data
+    : [];
+  const canCreateRecord =
+    canWrite &&
+    !!moduleConfig &&
+    !!newTitle.trim() &&
+    (!linkedTargetConfig || !!linkedRecordId);
 
   if (modulesQuery.isLoading || featuresQuery.isLoading) return <PageSpinner />;
   if (modulesQuery.isError)
@@ -221,8 +520,11 @@ export default function ModuleDetailPage() {
   return (
     <div>
       <PageHeader
-        title={config.title}
-        description={config.subtitle}
+        title={moduleConfig?.title || "Module Workspace"}
+        description={
+          moduleConfig?.subtitle ||
+          "Live ERP workflows and records for this module."
+        }
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/app/modules">
@@ -232,31 +534,51 @@ export default function ModuleDetailPage() {
         }
       />
 
-      <div
-        className={`mb-6 rounded-xl border bg-gradient-to-r ${config.highlightGradient} p-5`}
-      >
+      <div className="mb-6 rounded-xl border bg-gradient-to-r from-cyan-500/15 to-blue-500/10 p-5">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-card/70">
-            <Icon size={22} className="text-primary" />
+            <Activity size={22} className="text-primary" />
           </div>
           <div>
             <p className="text-sm font-medium">
               Active module: {selectedModule.name}
             </p>
             <p className="text-xs text-muted-foreground">
-              Operational snapshot and static guidance.
+              Operational snapshot backed by tenant ERP records.
             </p>
           </div>
         </div>
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        {config.quickFacts.map((fact) => (
-          <div key={fact.label} className="rounded-lg border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{fact.label}</p>
-            <p className="mt-1 text-2xl font-bold">{fact.value}</p>
-          </div>
-        ))}
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Records</p>
+          <p className="mt-1 text-2xl font-bold">
+            {moduleSummary?.total_records ?? 0}
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Open</p>
+          <p className="mt-1 text-2xl font-bold">
+            {moduleSummary?.open_records ?? 0}
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs text-muted-foreground">
+            {normalizedModuleName === "finance"
+              ? "Amount Processed"
+              : "Tracked Value"}
+          </p>
+          <p className="mt-1 text-2xl font-bold">
+            {formatAmount(moduleSummary?.total_amount_cents ?? 0)}
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Blocked</p>
+          <p className="mt-1 text-2xl font-bold">
+            {moduleSummary?.blocked_records ?? 0}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -266,7 +588,9 @@ export default function ModuleDetailPage() {
             Key Workflows
           </h3>
           <div className="space-y-2">
-            {config.workflows.map((workflow, idx) => (
+            {(
+              moduleConfig?.workflows || ["Module workflow not configured yet"]
+            ).map((workflow, idx) => (
               <div
                 key={workflow}
                 className="rounded-md border bg-background/60 p-3 text-sm"
@@ -282,19 +606,153 @@ export default function ModuleDetailPage() {
 
         <div className="rounded-lg border bg-card p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Activity size={16} className="text-muted-foreground" />
-            Alerts and Focus Areas
+            <ListTodo size={16} className="text-muted-foreground" />
+            Create ERP Record
           </h3>
-          <div className="space-y-2">
-            {config.alerts.map((alert) => (
-              <div
-                key={alert}
-                className="rounded-md border bg-background/60 p-3 text-sm"
+          <div className="space-y-3">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Record title (e.g. April payroll run)"
+            />
+            <select
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={newEntity || defaultEntityName}
+              onChange={(e) => setNewEntity(e.target.value)}
+            >
+              {entityOptions.map((entity) => (
+                <option key={entity} value={entity}>
+                  {ENTITY_LABELS[entity] || entity}
+                </option>
+              ))}
+            </select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <select
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
               >
-                {alert}
+                {[
+                  "draft",
+                  "open",
+                  "in_progress",
+                  "review",
+                  "completed",
+                  "blocked",
+                ].map((status) => (
+                  <option key={status} value={status}>
+                    {status.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={newPriority}
+                onChange={(e) => setNewPriority(e.target.value)}
+              >
+                {["low", "normal", "high", "critical"].map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              value={newAmount}
+              onChange={(e) => setNewAmount(e.target.value)}
+              placeholder="Amount in major unit (optional)"
+              type="number"
+            />
+            <Input
+              value={newDueAt}
+              onChange={(e) => setNewDueAt(e.target.value)}
+              type="datetime-local"
+            />
+            {linkedTargetConfig ? (
+              <div className="rounded-md border bg-background/60 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    Linked {linkedTargetConfig.label}
+                  </p>
+                  <Badge variant="outline">
+                    {linkedTargetConfig.entities
+                      .map((entity) => ENTITY_LABELS[entity] || entity)
+                      .join(" / ")}
+                  </Badge>
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {linkedTargetConfig.helper}
+                </p>
+                {linkedTargetConfig.entities.length > 1 ? (
+                  <select
+                    className="mb-3 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={linkedEntityName}
+                    onChange={(e) => setLinkedEntityName(e.target.value)}
+                  >
+                    {linkedTargetConfig.entities.map((entity) => (
+                      <option key={entity} value={entity}>
+                        {ENTITY_LABELS[entity] || entity}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={linkedRecordId}
+                  onChange={(e) => setLinkedRecordId(e.target.value)}
+                >
+                  <option value="">Select {linkedTargetConfig.label}</option>
+                  {linkedRecordOptions.map((record) => (
+                    <option key={record.id} value={record.id}>
+                      {record.title}
+                    </option>
+                  ))}
+                </select>
+                {linkedRecordsQuery.isLoading ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Loading linked records...
+                  </p>
+                ) : linkedRecordOptions.length === 0 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Create a {linkedTargetConfig.label.toLowerCase()} first to
+                    use this workflow.
+                  </p>
+                ) : null}
               </div>
-            ))}
+            ) : null}
+            <Button
+              className="w-full"
+              disabled={!canCreateRecord || createRecordMutation.isPending}
+              onClick={() => createRecordMutation.mutate()}
+            >
+              <Plus size={14} /> Create Record
+            </Button>
+            {!canWrite ? (
+              <p className="text-xs text-muted-foreground">
+                You need Admin or Manager role to create records.
+              </p>
+            ) : !moduleConfig ? (
+              <p className="text-xs text-muted-foreground">
+                This module is not yet mapped to ERP entities. Add a blueprint
+                first.
+              </p>
+            ) : null}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border bg-card p-5">
+        <h3 className="mb-3 text-sm font-semibold">Workflow Controls</h3>
+        <div className="mb-3 rounded-md border bg-background/60 p-3 text-sm text-muted-foreground">
+          Use transitions to move records through their ERP lifecycle, or block
+          a record with a reason so teams can triage it.
+        </div>
+        <div className="space-y-3">
+          <Input
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            placeholder="Block reason for the next blocked transition"
+          />
         </div>
       </div>
 
@@ -312,6 +770,81 @@ export default function ModuleDetailPage() {
               <Badge key={f.id} variant="outline">
                 {f.feature_key || "feature"}
               </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 rounded-lg border bg-card p-5">
+        <h3 className="mb-3 text-sm font-semibold">Recent ERP Records</h3>
+        {recordsQuery.isLoading ? (
+          <PageSpinner />
+        ) : recordsQuery.isError ? (
+          <ErrorDisplay
+            message={getErrorMessage(recordsQuery.error)}
+            onRetry={() => recordsQuery.refetch()}
+          />
+        ) : !recordsQuery.data?.length ? (
+          <p className="text-sm text-muted-foreground">
+            No records created yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {recordsQuery.data.map((record) => (
+              <div
+                key={record.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background/60 p-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{record.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ENTITY_LABELS[record.entity_name] || record.entity_name} •
+                    status: {record.status}
+                    {record.linked_record_title
+                      ? ` • linked to ${record.linked_record_title}`
+                      : ""}
+                    {record.amount_cents
+                      ? ` • ${formatAmount(record.amount_cents)}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    {ENTITY_LABELS[record.entity_name] || record.entity_name}
+                  </Badge>
+                  <Badge variant="outline">{record.status}</Badge>
+                  {canWrite && record.status !== "completed" ? (
+                    <>
+                      {(nextStatusMap[record.status] || []).map(
+                        (nextStatus) => (
+                          <Button
+                            key={`${record.id}-${nextStatus}`}
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              nextStatus === "blocked"
+                                ? blockRecordMutation.mutate(record.id)
+                                : transitionRecordMutation.mutate({
+                                    recordId: record.id,
+                                    toStatus: nextStatus,
+                                  })
+                            }
+                            disabled={
+                              transitionRecordMutation.isPending ||
+                              blockRecordMutation.isPending
+                            }
+                          >
+                            <Check size={14} />{" "}
+                            {nextStatus === "blocked"
+                              ? "Block"
+                              : `Move to ${nextStatus}`}
+                          </Button>
+                        ),
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              </div>
             ))}
           </div>
         )}
